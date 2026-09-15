@@ -1,4 +1,5 @@
 --!strict
+local ModelFit = require("../src/shared/ModelFit")
 local Units = require("../src/shared/Units")
 local HeadlightMath = require("../src/shared/HeadlightMath")
 local Driving = require("../src/shared/Driving")
@@ -296,4 +297,24 @@ test("gentler steering preserves direction and speed taper", function()
 	local high = Driving.forces(70, 0, 1, 0, false, tune)
 	assert(low > high and high > 0, "power falls off progressively as speed rises")
 end)
+test("imported driver stays aligned when scaling a model far from the origin", function()
+	-- A seat two studs behind a pivot at Z=100, scaled by half, must finish
+	-- one stud behind the centred car. The old origin scaling gave -49.
+	assert(ModelFit.coordinate(102, 100, 0.5, 100) == 1, "seat must remain inside the centred car")
+	assert(
+		ModelFit.coordinate(10002, 10000, 0.5, 10000) == 1,
+		"positive world translation must not change fit"
+	)
+	assert(
+		ModelFit.coordinate(-998, -1000, 0.5, -1000) == 1,
+		"negative world translation must not change fit"
+	)
+	-- Preserve relative placement of the seat and a dashboard point at any scale.
+	for _, scale in { 0.25, 0.5, 1, 1.6, 2 } do
+		local seat = ModelFit.coordinate(102, 100, scale, 97)
+		local dash = ModelFit.coordinate(98, 100, scale, 97)
+		assert(math.abs((seat - dash) - 4 * scale) < 0.000001, "seat/dashboard spacing must scale together")
+	end
+end)
+
 print(string.format("%d logic tests passed (no Roblox physics/services simulated)", passed))

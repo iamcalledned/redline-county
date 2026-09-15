@@ -25,7 +25,7 @@ case "${1:-check}" in
     fi
     bash scripts/project.sh sourcemap
     "$lsp_binary" analyze --platform roblox --sourcemap sourcemap.json --definitions .tools/globalTypes.d.luau src
-    .tools/luau/luau-analyze tests/logic.luau src/shared/Driving.luau src/shared/Rules.luau src/shared/Turbo.luau src/shared/HighwayMath.luau src/shared/TrafficMath.luau src/shared/CrashMath.luau src/shared/Units.luau src/shared/HeadlightMath.luau
+    .tools/luau/luau-analyze tests/logic.luau src/shared/Driving.luau src/shared/Rules.luau src/shared/Turbo.luau src/shared/HighwayMath.luau src/shared/TrafficMath.luau src/shared/CrashMath.luau src/shared/Units.luau src/shared/HeadlightMath.luau src/shared/ModelFit.luau
     ;;
   build)
     mkdir -p build

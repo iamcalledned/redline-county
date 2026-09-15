@@ -2,6 +2,7 @@
 -- Import geometry only. Asset scripts, joints, seats and controllers never enter Workspace.
 local AssetService = game:GetService("AssetService")
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+local ModelFit = require(game:GetService("ReplicatedStorage").Shared.ModelFit)
 local Cockpit = require(script.Parent.Cockpit)
 local Appearance = {}
 local template: Model? = nil
@@ -12,6 +13,13 @@ local function prepare(source: Model): Model
 	local visual = Instance.new("Model")
 	visual.Name = "ImportedCarAppearance"
 	local seat = source:FindFirstChildWhichIsA("VehicleSeat", true)
+	-- Prefer the authored driver seat when a model contains multiple seats.
+	for _, item in source:GetDescendants() do
+		if item:IsA("VehicleSeat") and (item.Name == "DriveSeat" or item.Name == "DriverSeat") then
+			seat = item
+			break
+		end
+	end
 	local bounds = source:GetBoundingBox()
 	local orientation = if seat then seat.CFrame.Rotation else bounds.Rotation
 	orientation *= CFrame.Angles(0, math.rad(Config.DefaultCarAppearance.YawDegrees), 0)
@@ -55,7 +63,10 @@ local function prepare(source: Model): Model
 		end
 	end
 	assert(#visual:GetChildren() > 0, "Asset contains no visible car parts")
-	local _, size = visual:GetBoundingBox()
+	local originalBox, size = visual:GetBoundingBox()
+	-- Fix the pivot explicitly so the seat and all cloned geometry share one transform.
+	local pivot = originalBox.Position
+	visual.WorldPivot = CFrame.new(pivot)
 	assert(size.X > 0 and size.Z > 0, "Asset has invalid bounds")
 	local scale =
 		math.min(Config.DefaultCarAppearance.Width / size.X, Config.DefaultCarAppearance.Length / size.Z)
@@ -67,9 +78,15 @@ local function prepare(source: Model): Model
 		local part = item :: BasePart
 		part.CFrame = CFrame.new(-offset) * part.CFrame
 	end
-	local driver = if seat
-		then (orientation:Inverse() * seat.CFrame).Position * scale - offset
-		else Vector3.new(-fitted.X * 0.23, 0.4, 0.5)
+	local driver = Vector3.new(-fitted.X * 0.23, 0.4, 0.5)
+	if seat then
+		local authored = (orientation:Inverse() * seat.CFrame).Position
+		driver = Vector3.new(
+			ModelFit.coordinate(authored.X, pivot.X, scale, offset.X),
+			ModelFit.coordinate(authored.Y, pivot.Y, scale, offset.Y),
+			ModelFit.coordinate(authored.Z, pivot.Z, scale, offset.Z)
+		)
+	end
 	visual:SetAttribute("DriverOffset", driver + Config.DefaultCarAppearance.SeatAdjustment)
 	visual:SetAttribute("HullSize", Vector3.new(fitted.X * 0.92, 1.1, fitted.Z * 0.96))
 	return visual
