@@ -38,3 +38,5 @@ The existing Rokit pins are unchanged. The additional test runtime is Luau 0.738
 - [Implementation sequence](docs/PLAN.md)
 
 Handling tuning lives in `src/shared/Config.luau`; pure math and lifecycle decisions are in `Driving.luau` and `Rules.luau`. Server modules build the course and vehicles, validate remote input, and enforce lifecycle checks. The client supplies input and renders UI/camera. There are no weapons, third-party models, external asset IDs, economy, persistence or publishing hooks. The server intentionally runs only in Studio at this stage.
+
+The repository includes `build/redline-county.rbxlx` and `build/smoke.rbxlx` so you can open the built places directly in Studio. After source changes, run `bash scripts/project.sh build` and commit the updated place files alongside the source. Downloaded tools, the generated sourcemap, and temporary files remain ignored.

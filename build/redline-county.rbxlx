@@ -1,0 +1,2927 @@
+<roblox version="4">
+  <Item class="AssetService" referent="0">
+    <Properties>
+      <string name="Name">AssetService</string>
+      <bool name="AllowInsertFreeAssets">true</bool>
+    </Properties>
+  </Item>
+  <Item class="Lighting" referent="1">
+    <Properties>
+      <string name="Name">Lighting</string>
+      <Color3 name="Ambient">
+        <R>0.055</R>
+        <G>0.065</G>
+        <B>0.1</B>
+      </Color3>
+      <float name="Brightness">1.5</float>
+      <float name="ClockTime">0.5</float>
+      <float name="ExposureCompensation">0.1</float>
+      <token name="ExtendLightRangeTo120">2</token>
+      <Color3 name="FogColor">
+        <R>0.05</R>
+        <G>0.06</G>
+        <B>0.09</B>
+      </Color3>
+      <float name="FogEnd">1800</float>
+      <float name="FogStart">650</float>
+      <bool name="GlobalShadows">true</bool>
+      <token name="LightingStyle">0</token>
+      <Color3 name="OutdoorAmbient">
+        <R>0.12</R>
+        <G>0.14</G>
+        <B>0.19</B>
+      </Color3>
+      <bool name="PrioritizeLightingQuality">true</bool>
+    </Properties>
+    <Item class="BloomEffect" referent="2">
+      <Properties>
+        <string name="Name">NightBloom</string>
+        <float name="Intensity">0.12</float>
+        <float name="Size">20</float>
+        <float name="Threshold">1.5</float>
+      </Properties>
+    </Item>
+  </Item>
+  <Item class="ReplicatedStorage" referent="3">
+    <Properties>
+      <string name="Name">ReplicatedStorage</string>
+    </Properties>
+    <Item class="Folder" referent="4">
+      <Properties>
+        <string name="Name">Shared</string>
+      </Properties>
+      <Item class="ModuleScript" referent="5">
+        <Properties>
+          <string name="Name">Config</string>
+          <string name="Source"><![CDATA[--!strict
+-- Distances are studs, speed studs/second, acceleration studs/second^2.
+local Units = require(script.Parent.Units)
+local Config = {
+	DefaultCarAppearance = {
+		AssetId = 6810376207,
+		YawDegrees = 0,
+		Width = 8.5,
+		Length = 16,
+		SeatAdjustment = Vector3.zero,
+	},
+	Title = "REDLINE COUNTY",
+	Build = "B+ · night Autobahn",
+	TrafficPerLane = 12,
+	SteeringResponse = 7,
+	Headlights = {
+		LowRange = 36,
+		HighRange = 120,
+		Angle = 60,
+		Brightness = 3,
+		FullBeamKmh = 180,
+	},
+	Crash = { RecoverySeconds = 3, ContactMargin = 0.25 },
+	Ramp = { XOffset = 105, StartZ = 160 },
+	Highway = { X = 4000, Y = 24, ChunkLength = 512, LoadRadius = 3, HalfLength = 4096, UpdateSeconds = 0.2 },
+	Turbo = {
+		SpoolSeconds = 1.2,
+		DecaySeconds = 0.5,
+		HeatRate = 0.12,
+		CoolRate = 0.22,
+		RestartHeat = 0.35,
+		MinSpeed = 15,
+	},
+	PhysicsSpeedLimit = 500,
+	InputHz = 25,
+	InputTimeout = 0.4,
+	SpawnCooldown = 4,
+	ResetCooldown = 8,
+	AbandonedSeconds = 120,
+	MaxVehicles = 12,
+	Lifecycle = { GarageRadius = 68, StopSpeed = 8, ResetReach = 16, FlippedUp = 0.25, FlippedSpeed = 22 },
+	CameraDistance = 23,
+	CameraHeight = 9,
+	CameraResponse = 7,
+	Suspension = { Rest = 2.25, Reach = 3.6, Spring = 135, Damping = 11 },
+	Cars = {
+		Compact = {
+			TopSpeed = Units.fromKmh(190),
+			BoostSpeed = Units.fromKmh(40),
+			BoostAcceleration = 1.25,
+			ReverseSpeed = Units.fromKmh(20),
+			Acceleration = 18,
+			Brake = 32,
+			Grip = 8,
+			DriftGrip = 1.1,
+			DriftTurn = 1.7,
+			DriftMinSpeed = 18,
+			DriftDrag = 0.06,
+			Turn = 1.275,
+			Color = Color3.fromRGB(255, 94, 111),
+		},
+		Coupe = {
+			TopSpeed = Units.fromKmh(240),
+			BoostSpeed = Units.fromKmh(60),
+			BoostAcceleration = 1.25,
+			ReverseSpeed = Units.fromKmh(20),
+			Acceleration = 27,
+			Brake = 36,
+			Grip = 7,
+			DriftGrip = 0.95,
+			DriftTurn = 1.7,
+			DriftMinSpeed = 18,
+			DriftDrag = 0.06,
+			Turn = 1.1475,
+			Color = Color3.fromRGB(255, 188, 91),
+		},
+		Interceptor = {
+			TopSpeed = Units.fromKmh(230),
+			BoostSpeed = Units.fromKmh(50),
+			BoostAcceleration = 1.25,
+			ReverseSpeed = Units.fromKmh(20),
+			Acceleration = 24,
+			Brake = 35,
+			Grip = 8.5,
+			DriftGrip = 1.35,
+			DriftTurn = 1.7,
+			DriftMinSpeed = 18,
+			DriftDrag = 0.06,
+			Turn = 1.19,
+			Color = Color3.fromRGB(77, 185, 224),
+		},
+	},
+}
+return table.freeze(Config)
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="6">
+        <Properties>
+          <string name="Name">CrashMath</string>
+          <string name="Source"><![CDATA[--!strict
+local CrashMath = {}
+
+-- Intersect entry/exit times on separating axes. Used for a moving oriented car
+-- against axis-aligned lane traffic, including vertical separation.
+function CrashMath.sweep(start: { number }, finish: { number }, halfExtents: { number }): number?
+	local first, last = 0, 1
+	for axis, extent in halfExtents do
+		local origin, delta = start[axis], finish[axis] - start[axis]
+		if math.abs(delta) < 1e-8 then
+			if math.abs(origin) > extent then
+				return nil
+			end
+		else
+			local a, b = (-extent - origin) / delta, (extent - origin) / delta
+			if a > b then
+				a, b = b, a
+			end
+			first, last = math.max(first, a), math.min(last, b)
+			if first > last then
+				return nil
+			end
+		end
+	end
+	return first
+end
+
+function CrashMath.canBegin(crashed: boolean, contact: boolean): boolean
+	return contact and not crashed
+end
+
+return CrashMath
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="7">
+        <Properties>
+          <string name="Name">Driving</string>
+          <string name="Source"><![CDATA[--!strict
+-- Engine-independent handling math: tested in the standalone Luau runtime.
+local Driving = {}
+export type Tuning = {
+	TopSpeed: number,
+	BoostSpeed: number,
+	BoostAcceleration: number,
+	ReverseSpeed: number,
+	Acceleration: number,
+	Brake: number,
+	Grip: number,
+	DriftGrip: number,
+	DriftTurn: number,
+	DriftMinSpeed: number,
+	DriftDrag: number,
+	Turn: number,
+}
+
+function Driving.finite(value: any): boolean
+	return type(value) == "number" and value == value and math.abs(value) < math.huge
+end
+
+function Driving.validInput(throttle: any, steer: any, drift: any): boolean
+	return Driving.finite(throttle)
+		and Driving.finite(steer)
+		and math.abs(throttle) <= 1
+		and math.abs(steer) <= 1
+		and type(drift) == "boolean"
+end
+
+function Driving.forces(
+	speed: number,
+	lateral: number,
+	throttle: number,
+	steer: number,
+	drift: boolean,
+	tune: Tuning,
+	boost: number?
+): (number, number, number)
+	local pressure = math.clamp(boost or 0, 0, 1)
+	local acceleration: number
+	if throttle * speed < -3 then
+		acceleration = throttle * tune.Brake
+	elseif math.abs(throttle) < 0.01 then
+		acceleration = -speed * 0.65
+	else
+		local limit = if throttle > 0 then tune.TopSpeed + pressure * tune.BoostSpeed else tune.ReverseSpeed
+		local powerFade = if throttle > 0 then 1 / (1 + (math.abs(speed) / (limit * 0.55)) ^ 2) else 1
+		acceleration = throttle
+			* powerFade
+			* tune.Acceleration
+			* (1 + pressure * (tune.BoostAcceleration - 1))
+			* math.clamp((limit - math.abs(speed)) / 15, 0, 1)
+		-- Aerodynamic slowdown above the available power limit, including turbo cooldown.
+		acceleration -= math.sign(speed) * math.max(0, math.abs(speed) - limit) * 0.65
+	end
+	-- Blend in only while moving forward: parking and reversing stay predictable.
+	local slide = if drift then math.clamp((speed - tune.DriftMinSpeed) / 15, 0, 1) else 0
+	acceleration -= speed * tune.DriftDrag * slide
+	-- Steering tapers at speed, and reverses while backing up. No pivoting at rest.
+	local turn = -steer * tune.Turn * math.clamp(speed / 18, -1, 1) / (1 + math.abs(speed) / 130)
+	turn *= 1 + (tune.DriftTurn - 1) * slide
+	local grip = tune.Grip + (tune.DriftGrip - tune.Grip) * slide
+	return acceleration, -lateral * grip, turn
+end
+
+function Driving.approach(current: number, target: number, response: number, dt: number): number
+	return current + (target - current) * (1 - math.exp(-response * dt))
+end
+
+return Driving
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="8">
+        <Properties>
+          <string name="Name">HeadlightMath</string>
+          <string name="Source"><![CDATA[--!strict
+local HeadlightMath = {}
+export type Tuning = {
+	LowRange: number,
+	HighRange: number,
+	Angle: number,
+	Brightness: number,
+	FullBeamKmh: number,
+}
+
+function HeadlightMath.beam(kmh: number, tune: Tuning): (number, number, number)
+	local blend = math.clamp(kmh / tune.FullBeamKmh, 0, 1)
+	-- Smoothstep avoids sudden visible changes near the endpoints.
+	blend = blend * blend * (3 - 2 * blend)
+	return tune.LowRange + (tune.HighRange - tune.LowRange) * blend, tune.Angle, tune.Brightness
+end
+
+return HeadlightMath
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="9">
+        <Properties>
+          <string name="Name">HighwayMath</string>
+          <string name="Source"><![CDATA[--!strict
+local HighwayMath = {}
+
+function HighwayMath.wrap(z: number, halfLength: number): number
+	return (z + halfLength) % (2 * halfLength) - halfLength
+end
+
+function HighwayMath.needed(
+	positions: { number },
+	length: number,
+	radius: number,
+	halfLength: number
+): { [number]: boolean }
+	local result: { [number]: boolean } = {}
+	local function add(z: number)
+		local center = math.floor(-z / length)
+		for index = center - radius, center + radius do
+			result[index] = true
+		end
+	end
+	for _, z in positions do
+		z = HighwayMath.wrap(z, halfLength)
+		add(z)
+		-- Prefetch the other side of the recycle point BEFORE a car reaches it.
+		if z < -halfLength + length * radius then
+			add(z + 2 * halfLength)
+		end
+		if z > halfLength - length * radius then
+			add(z - 2 * halfLength)
+		end
+	end
+	return result
+end
+
+function HighwayMath.travel(previousZ: number, nextZ: number, halfLength: number, maxTravel: number): number
+	local delta = math.abs(HighwayMath.wrap(nextZ - previousZ, halfLength))
+	return if delta <= maxTravel then delta else 0
+end
+
+return HighwayMath
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="10">
+        <Properties>
+          <string name="Name">ModelFit</string>
+          <string name="Source"><![CDATA[--!strict
+local ModelFit = {}
+
+-- ScaleTo scales positions about the model pivot, not about the world origin.
+-- Apply exactly that transform before the final chassis-centering translation.
+function ModelFit.coordinate(position: number, pivot: number, scale: number, offset: number): number
+	return pivot + (position - pivot) * scale - offset
+end
+
+return ModelFit
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="11">
+        <Properties>
+          <string name="Name">Rules</string>
+          <string name="Source"><![CDATA[--!strict
+-- Pure lifecycle decisions shared by server checks and command-line tests.
+local Rules = {}
+export type Limits = {
+	GarageRadius: number,
+	StopSpeed: number,
+	ResetReach: number,
+	FlippedUp: number,
+	FlippedSpeed: number,
+}
+export type Bucket = { tokens: number, updated: number }
+
+function Rules.consume(bucket: Bucket, now: number, rate: number, burst: number): boolean
+	bucket.tokens = math.min(burst, bucket.tokens + math.max(0, now - bucket.updated) * rate)
+	bucket.updated = now
+	if bucket.tokens < 1 then
+		return false
+	end
+	bucket.tokens -= 1
+	return true
+end
+
+function Rules.canReset(
+	speed: number,
+	up: number,
+	driving: boolean,
+	distance: number,
+	limits: Limits
+): boolean
+	return (driving or distance <= limits.ResetReach)
+		and (speed <= limits.StopSpeed or (up < limits.FlippedUp and speed <= limits.FlippedSpeed))
+end
+
+function Rules.canSpawn(
+	distance: number,
+	speed: number,
+	occupiedByOther: boolean,
+	now: number,
+	nextSpawn: number,
+	limits: Limits
+): boolean
+	return distance <= limits.GarageRadius
+		and speed <= limits.StopSpeed
+		and not occupiedByOther
+		and now >= nextSpawn
+end
+
+return Rules
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="12">
+        <Properties>
+          <string name="Name">TrafficMath</string>
+          <string name="Source"><![CDATA[--!strict
+local TrafficMath = {}
+
+-- Three lanes each way. Equal speeds within a lane preserve spacing indefinitely.
+function TrafficMath.position(
+	lane: number,
+	slot: number,
+	elapsed: number,
+	half: number,
+	perLane: number
+): (number, number, number)
+	local direction = if lane <= 3 then -1 else 1
+	local offset = (lane - 1) % 3
+	local x = (15 + offset * 18) * -direction
+	local speed = (90 - offset * 15) * direction
+	local start = -180 - lane * 35 + slot * (half * 2 / perLane)
+	local z = (start + elapsed * speed + half) % (half * 2) - half
+	return x, z, direction
+end
+
+return TrafficMath
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="13">
+        <Properties>
+          <string name="Name">Turbo</string>
+          <string name="Source"><![CDATA[--!strict
+local Turbo = {}
+export type State = { boost: number, heat: number, overheated: boolean }
+export type Tuning = {
+	SpoolSeconds: number,
+	DecaySeconds: number,
+	HeatRate: number,
+	CoolRate: number,
+	RestartHeat: number,
+	MinSpeed: number,
+}
+
+function Turbo.step(
+	state: State,
+	dt: number,
+	enabled: boolean,
+	throttle: number,
+	speed: number,
+	drift: boolean,
+	tune: Tuning
+)
+	dt = math.clamp(dt, 0, 0.1)
+	if state.overheated and state.heat <= tune.RestartHeat then
+		state.overheated = false
+	end
+	local loaded = enabled and not state.overheated and throttle > 0.8 and speed > tune.MinSpeed and not drift
+	local target = if loaded then 1 else 0
+	local rate = if loaded then 1 / tune.SpoolSeconds else 1 / tune.DecaySeconds
+	state.boost += math.clamp(target - state.boost, -dt * rate, dt * rate)
+	state.heat =
+		math.clamp(state.heat + dt * (if loaded then state.boost * tune.HeatRate else -tune.CoolRate), 0, 1)
+	if state.heat >= 1 then
+		state.overheated = true
+	end
+	-- Residual spool is displayed, but supplies no power after disabling, lifting or overheating.
+	return if loaded and not state.overheated then state.boost else 0
+end
+
+return Turbo
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="14">
+        <Properties>
+          <string name="Name">Units</string>
+          <string name="Source"><![CDATA[--!strict
+-- Roblox standard scale: one stud = 0.28 metres.
+local Units = {}
+function Units.kmh(studsPerSecond: number): number
+	return math.abs(studsPerSecond) * 0.28 * 3.6
+end
+function Units.mph(studsPerSecond: number): number
+	return Units.kmh(studsPerSecond) / 1.609344
+end
+function Units.fromKmh(kmh: number): number
+	return kmh / (0.28 * 3.6)
+end
+function Units.kilometres(studs: number): number
+	return studs * 0.28 / 1000
+end
+return Units
+]]></string>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="ServerScriptService" referent="15">
+    <Properties>
+      <string name="Name">ServerScriptService</string>
+    </Properties>
+    <Item class="Folder" referent="16">
+      <Properties>
+        <string name="Name">Server</string>
+      </Properties>
+      <Item class="ModuleScript" referent="17">
+        <Properties>
+          <string name="Name">Cockpit</string>
+          <string name="Source"><![CDATA[--!strict
+local Cockpit = {}
+
+function Cockpit.install(model: Model, body: BasePart, seatOffset: Vector3)
+	local seat = model:FindFirstChild("DriverSeat") :: VehicleSeat
+	local occupant = seat.Occupant
+	if occupant then
+		occupant.Sit = false
+		local riderWeld = seat:FindFirstChild("SeatWeld")
+		if riderWeld then
+			riderWeld:Destroy()
+		end
+	end
+	for _, child in seat:GetChildren() do
+		if child:IsA("WeldConstraint") then
+			child:Destroy()
+		end
+	end
+	seat.CFrame = body.CFrame * CFrame.new(seatOffset)
+	local seatWeld = Instance.new("WeldConstraint")
+	seatWeld.Part0, seatWeld.Part1, seatWeld.Parent = body, seat, seat
+	local eye = Instance.new("Attachment")
+	eye.Name = "CockpitEye"
+	eye.Position = seatOffset + Vector3.new(0, 1.8, -0.15)
+	eye.Parent = body
+
+	local wheel = Instance.new("Model")
+	wheel.Name = "SteeringWheel"
+	local center = CFrame.new(seatOffset + Vector3.new(0, 0.85, -1.3)) * CFrame.Angles(math.rad(-15), 0, 0)
+	local function piece(name: string, size: Vector3, offset: CFrame): Part
+		local part = Instance.new("Part")
+		part.Name, part.Size = name, size
+		part.CFrame = body.CFrame * center * offset
+		part.Color = Color3.fromRGB(27, 31, 36)
+		part.Material = Enum.Material.SmoothPlastic
+		part.CanCollide, part.CanTouch, part.CanQuery, part.Massless = false, false, false, true
+		part.Parent = wheel
+		return part
+	end
+	local hub = piece("Hub", Vector3.new(0.35, 0.3, 0.18), CFrame.identity)
+	local function weld(part: Part)
+		local joint = Instance.new("WeldConstraint")
+		joint.Part0, joint.Part1, joint.Parent = hub, part, part
+	end
+	for i = 0, 23 do
+		local angle = i * math.pi * 2 / 24
+		weld(
+			piece(
+				"Rim",
+				Vector3.new(0.2, 0.13, 0.14),
+				CFrame.new(math.sin(angle) * 0.68, math.cos(angle) * 0.68, 0) * CFrame.Angles(0, 0, -angle)
+			)
+		)
+	end
+	for _, angle in { math.pi / 2, -math.pi / 2, math.pi } do
+		weld(piece("Spoke", Vector3.new(0.12, 0.6, 0.12), CFrame.Angles(0, 0, angle) * CFrame.new(0, 0.3, 0)))
+	end
+	local motor = Instance.new("Motor6D")
+	motor.Name = "SteeringMotor"
+	motor.Part0, motor.Part1, motor.C0 = body, hub, center
+	motor:SetAttribute("Rest", center)
+	motor.Parent = body
+	wheel.Parent = model
+	model:SetAttribute("CockpitReady", true)
+	if occupant then
+		task.defer(function()
+			if
+				seat.Parent
+				and occupant.Parent
+				and occupant.Health > 0
+				and not model:GetAttribute("Crashed")
+			then
+				seat:Sit(occupant)
+			end
+		end)
+	end
+end
+
+return Cockpit
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="18">
+        <Properties>
+          <string name="Name">Course</string>
+          <string name="Source"><![CDATA[--!strict
+local Course = {}
+Course.Garage = Vector3.new(0, 0, 82)
+Course.Pads = { CFrame.new(-36, 4, 60), CFrame.new(-12, 4, 60), CFrame.new(12, 4, 60), CFrame.new(36, 4, 60) }
+
+local function part(
+	parent: Instance,
+	name: string,
+	size: Vector3,
+	cf: CFrame,
+	color: Color3,
+	material: Enum.Material?
+): Part
+	local p = Instance.new("Part")
+	p.Name, p.Size, p.CFrame, p.Color = name, size, cf, color
+	p.Anchored = true
+	p.Material = material or Enum.Material.SmoothPlastic
+	p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+	p.Parent = parent
+	return p
+end
+
+local function sign(parent: Instance, title: string, subtitle: string, cf: CFrame, width: number)
+	local board = part(parent, title, Vector3.new(width, 9, 1), cf, Color3.fromRGB(18, 28, 42))
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 30
+	gui.Parent = board
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = title .. "\n" .. subtitle
+	label.Font = Enum.Font.GothamBold
+	label.TextColor3 = Color3.fromRGB(255, 180, 127)
+	label.TextScaled = true
+	label.Parent = gui
+end
+
+function Course.build(): Model
+	local model = Instance.new("Model")
+	model.Name = "HandlingCourse"
+	model.Parent = workspace
+	local asphalt = Color3.fromRGB(44, 53, 65)
+	part(
+		model,
+		"CoastalShelf",
+		Vector3.new(1600, 8, 1600),
+		CFrame.new(0, -4.6, -210),
+		Color3.fromRGB(149, 141, 114),
+		Enum.Material.Sand
+	)
+	local ocean = part(
+		model,
+		"Ocean",
+		Vector3.new(2200, 1, 2200),
+		CFrame.new(0, -10, -200),
+		Color3.fromRGB(32, 126, 157),
+		Enum.Material.SmoothPlastic
+	)
+	ocean.CanCollide, ocean.CanQuery = false, false
+	part(
+		model,
+		"HandlingPad",
+		Vector3.new(510, 1, 620),
+		CFrame.new(0, -0.5, -200),
+		asphalt,
+		Enum.Material.Asphalt
+	)
+	part(model, "GarageApron", Vector3.new(140, 1, 85), CFrame.new(0, 0, 83), Color3.fromRGB(57, 77, 87))
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "GarageSpawn"
+	spawn.Size, spawn.CFrame = Vector3.new(12, 1, 10), CFrame.new(0, 1, 105)
+	spawn.Anchored, spawn.Neutral = true, true
+	spawn.Duration = 0
+	spawn.Color = Color3.fromRGB(84, 219, 206)
+	spawn.Parent = model
+	sign(model, "REDLINE COUNTY", "GARAGE / HANDLING LAB", CFrame.new(0, 13, 124), 64)
+	part(
+		model,
+		"NeonHeader",
+		Vector3.new(64, 0.5, 1.2),
+		CFrame.new(0, 18, 124),
+		Color3.fromRGB(255, 95, 126),
+		Enum.Material.Neon
+	)
+	for i, pad in Course.Pads do
+		part(
+			model,
+			"Bay" .. i,
+			Vector3.new(15, 0.15, 24),
+			CFrame.new(pad.Position.X, 0.58, pad.Position.Z),
+			Color3.fromRGB(77, 112, 119)
+		)
+	end
+	-- Wide rectangular loop with escape room; central infield is deliberately open.
+	for _, x in { -210, 210 } do
+		for z = -460, 30, 25 do
+			part(
+				model,
+				"LaneDash",
+				Vector3.new(0.6, 0.08, 11),
+				CFrame.new(x, 0.06, z),
+				Color3.fromRGB(239, 216, 160)
+			)
+		end
+	end
+	for _, z in { -470, 20 } do
+		for x = -180, 180, 25 do
+			part(
+				model,
+				"LaneDash",
+				Vector3.new(11, 0.08, 0.6),
+				CFrame.new(x, 0.06, z),
+				Color3.fromRGB(239, 216, 160)
+			)
+		end
+	end
+	-- Open edges connect the handling pad to the surrounding drivable land.
+	for z = -70, -350, -40 do
+		local x = if math.floor(-z / 40) % 2 == 0 then -22 else 22
+		local cone = part(
+			model,
+			"SlalomBollard",
+			Vector3.new(3, 4, 3),
+			CFrame.new(x, 2, z),
+			Color3.fromRGB(255, 130, 76)
+		)
+		cone.CanCollide = false
+	end
+	sign(model, "01 / SLALOM", "Predictable turns at 35–60 km/h", CFrame.new(0, 13, -45), 35)
+	-- A low bridge provides a ramp, crest and descent without expanding into a full map.
+	part(
+		model,
+		"RampUp",
+		Vector3.new(35, 2, 85),
+		CFrame.new(115, 6, -170) * CFrame.Angles(math.rad(8), 0, 0),
+		asphalt
+	)
+	part(model, "Crest", Vector3.new(35, 2, 40), CFrame.new(115, 12, -232), asphalt)
+	part(
+		model,
+		"RampDown",
+		Vector3.new(35, 2, 85),
+		CFrame.new(115, 6, -294) * CFrame.Angles(math.rad(-8), 0, 0),
+		asphalt
+	)
+	sign(model, "02 / CREST", "Climb · landing · recovery", CFrame.new(115, 13, -115), 32)
+	for i = 1, 28 do
+		local angle = i * math.pi * 2 / 28
+		part(
+			model,
+			"SkidCircle",
+			Vector3.new(3, 0.08, 5),
+			CFrame.new(-108 + math.cos(angle) * 51, 0.07, -240 + math.sin(angle) * 51),
+			Color3.fromRGB(92, 204, 191)
+		).CanCollide =
+			false
+	end
+	sign(model, "03 / SKIDPAD", "Turn + Space / Shift at speed", CFrame.new(-110, 13, -155), 39)
+	for _, pos in { Vector3.new(-280, 0, 25), Vector3.new(280, 0, -70), Vector3.new(-280, 0, -365) } do
+		part(
+			model,
+			"PalmTrunk",
+			Vector3.new(3, 24, 3),
+			CFrame.new(pos + Vector3.new(0, 12, 0)),
+			Color3.fromRGB(114, 95, 82)
+		)
+		for yaw = 0, 135, 45 do
+			part(
+				model,
+				"PalmCrown",
+				Vector3.new(32, 2, 6),
+				CFrame.new(pos + Vector3.new(0, 24, 0)) * CFrame.Angles(0, math.rad(yaw), 0),
+				Color3.fromRGB(47, 113, 103)
+			)
+		end
+	end
+	return model
+end
+
+return Course
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="19">
+        <Properties>
+          <string name="Name">CrashEffect</string>
+          <string name="Source"><![CDATA[--!strict
+local Debris = game:GetService("Debris")
+local CrashEffect = {}
+
+function CrashEffect.show(model: Model, body: BasePart)
+	local explosion = Instance.new("Explosion")
+	explosion.Position = body.Position
+	explosion.BlastRadius = 14
+	explosion.BlastPressure = 0
+	explosion.DestroyJointRadiusPercent = 0
+	explosion.ExplosionType = Enum.ExplosionType.NoCraters
+	explosion.Parent = workspace
+	Debris:AddItem(explosion, 3)
+	-- Explicitly destroy only the crashed car; the visual blast never damages bystanders or roads.
+	for _, item in model:GetDescendants() do
+		if item:IsA("Light") then
+			item.Enabled = false
+		end
+		if item:IsA("BasePart") then
+			item.Color = Color3.fromRGB(38, 34, 32)
+		end
+	end
+	local fire = Instance.new("Fire")
+	fire.Size, fire.Heat, fire.Parent = 10, 6, body
+	local smoke = Instance.new("Smoke")
+	smoke.Size, smoke.RiseVelocity, smoke.Opacity, smoke.Parent = 9, 12, 0.6, body
+	for i = 1, 6 do
+		local fragment = Instance.new("Part")
+		fragment.Name, fragment.Size = "CrashFragment", Vector3.new(1.5, 0.5, 2)
+		fragment.CFrame = body.CFrame * CFrame.new((i % 3 - 1) * 2, 2, math.floor(i / 3) * 2 - 2)
+		fragment.Color = Color3.fromRGB(60, 66, 72)
+		fragment.CanCollide, fragment.CanTouch, fragment.CanQuery = false, false, false
+		fragment.Parent = workspace
+		fragment:SetNetworkOwner(nil)
+		fragment.AssemblyLinearVelocity = Vector3.new(math.cos(i) * 25, 25 + i * 3, math.sin(i) * 25)
+		Debris:AddItem(fragment, 2)
+	end
+end
+
+return CrashEffect
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="20">
+        <Properties>
+          <string name="Name">Highway</string>
+          <string name="Source"><![CDATA[--!strict
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.Shared.Config)
+local HighwayMath = require(ReplicatedStorage.Shared.HighwayMath)
+local Driving = require(ReplicatedStorage.Shared.Driving)
+local Traffic = require(script.Parent.Traffic)
+local H = Config.Highway
+local Highway = {}
+local folder = Instance.new("Folder")
+folder.Name, folder.Parent = "Autobahn", workspace
+local chunks: { [number]: Model } = {}
+local clock = 0
+
+local function part(
+	model: Model,
+	name: string,
+	size: Vector3,
+	position: Vector3,
+	color: Color3,
+	material: Enum.Material?
+): Part
+	local p = Instance.new("Part")
+	p.Name, p.Size, p.Position, p.Color = name, size, position, color
+	p.Anchored = true
+	p.Material = material or Enum.Material.SmoothPlastic
+	p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+	p.Parent = model
+	return p
+end
+
+local function downlight(lamp: BasePart)
+	local light = Instance.new("SurfaceLight")
+	light.Face, light.Range, light.Angle, light.Brightness = Enum.NormalId.Bottom, 60, 140, 1.8
+	light.Color, light.Shadows, light.Parent = Color3.fromRGB(255, 214, 158), false, lamp
+end
+
+local function build(index: number)
+	if chunks[index] then
+		return
+	end
+	local model = Instance.new("Model")
+	model.Name = "Section_" .. index
+	local z = -(index + 0.5) * H.ChunkLength
+	local road = Color3.fromRGB(39, 46, 57)
+	local white = Color3.fromRGB(232, 233, 211)
+	local variant = index % 4
+	part(
+		model,
+		"Verge",
+		Vector3.new(460, 8, H.ChunkLength),
+		Vector3.new(H.X, H.Y - 4.5, z),
+		if variant == 1 then Color3.fromRGB(157, 151, 116) else Color3.fromRGB(91, 120, 91),
+		Enum.Material.Grass
+	)
+	part(
+		model,
+		"Road",
+		Vector3.new(132, 1, H.ChunkLength),
+		Vector3.new(H.X, H.Y - 0.5, z),
+		road,
+		Enum.Material.Asphalt
+	)
+	part(
+		model,
+		"Median",
+		Vector3.new(5, 3, H.ChunkLength),
+		Vector3.new(H.X, H.Y + 1.5, z),
+		Color3.fromRGB(120, 137, 144)
+	)
+	for _, x in { -66, 66 } do
+		if x == 66 and index == 0 then
+			-- Real opening for the acceleration lane; all other guardrail sections remain intact.
+			part(
+				model,
+				"Guardrail",
+				Vector3.new(1, 3, 240),
+				Vector3.new(H.X + x, H.Y + 1.5, -120),
+				Color3.fromRGB(150, 174, 181)
+			)
+			part(
+				model,
+				"Guardrail",
+				Vector3.new(1, 3, 92),
+				Vector3.new(H.X + x, H.Y + 1.5, -466),
+				Color3.fromRGB(150, 174, 181)
+			)
+		else
+			part(
+				model,
+				"Guardrail",
+				Vector3.new(1, 3, H.ChunkLength),
+				Vector3.new(H.X + x, H.Y + 1.5, z),
+				Color3.fromRGB(150, 174, 181)
+			)
+		end
+	end
+	for _, x in { -59, -7, 7, 59 } do
+		part(
+			model,
+			"EdgeLine",
+			Vector3.new(0.4, 0.04, H.ChunkLength),
+			Vector3.new(H.X + x, H.Y + 0.025, z),
+			white
+		).CanCollide =
+			false
+	end
+	for offset = 16, H.ChunkLength - 1, 64 do
+		for _, x in { -60, 60 } do
+			local reflector = part(
+				model,
+				"RoadReflector",
+				Vector3.new(0.4, 0.6, 1.2),
+				Vector3.new(H.X + x, H.Y + 0.4, -index * H.ChunkLength - offset),
+				Color3.fromRGB(234, 222, 184),
+				Enum.Material.Neon
+			)
+			reflector.CanCollide = false
+		end
+		for _, x in { -24, -42, 24, 42 } do
+			part(
+				model,
+				"LaneDash",
+				Vector3.new(0.4, 0.04, 28),
+				Vector3.new(H.X + x, H.Y + 0.025, -index * H.ChunkLength - offset),
+				white
+			).CanCollide =
+				false
+		end
+	end
+	for _, x in { -88, if index == 0 then 148 else 88 } do
+		part(
+			model,
+			"LampPost",
+			Vector3.new(1, 26, 1),
+			Vector3.new(H.X + x, H.Y + 13, z),
+			Color3.fromRGB(67, 85, 99)
+		)
+		local lamp = part(
+			model,
+			"Lamp",
+			Vector3.new(12, 0.4, 2),
+			Vector3.new(H.X + x, H.Y + 26, z),
+			Color3.fromRGB(255, 206, 133),
+			Enum.Material.Neon
+		)
+		downlight(lamp)
+		if variant == 2 then
+			part(
+				model,
+				"Factory",
+				Vector3.new(60, 35, 100),
+				Vector3.new(H.X + x * 2, H.Y + 17, z),
+				Color3.fromRGB(83, 102, 125)
+			)
+		else
+			part(
+				model,
+				"Hill",
+				Vector3.new(80, 45, 180),
+				Vector3.new(H.X + x * 2, H.Y + 3, z),
+				Color3.fromRGB(63, 94, 88)
+			).Shape =
+				Enum.PartType.Ball
+		end
+	end
+	-- Gantries mark the repeating landscape without pretending physical coordinates are trip distance.
+	local board = part(
+		model,
+		"AutobahnSign",
+		Vector3.new(48, 9, 1),
+		Vector3.new(H.X + 33, H.Y + 20, z),
+		Color3.fromRGB(30, 85, 159)
+	)
+	part(
+		model,
+		"Gantry",
+		Vector3.new(1, 25, 1),
+		Vector3.new(H.X + 62, H.Y + 12, z),
+		Color3.fromRGB(131, 152, 168)
+	)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face, gui.PixelsPerStud = Enum.NormalId.Back, 24
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.Parent = board
+	local label = Instance.new("TextLabel")
+	label.Size, label.BackgroundTransparency = UDim2.fromScale(1, 1), 1
+	label.Text = "A1  /  REDLINE AUTOBAHN\nKEEP RIGHT  •  PASS LEFT"
+	label.TextColor3, label.Font, label.TextScaled = white, Enum.Font.GothamBold, true
+	label.Parent = gui
+	model.Parent = folder
+	chunks[index] = model
+end
+
+function Highway.prepare(z: number)
+	for index in HighwayMath.needed({ z }, H.ChunkLength, H.LoadRadius, H.HalfLength) do
+		build(index)
+	end
+end
+
+function Highway.entry(): CFrame
+	Highway.prepare(Config.Ramp.StartZ)
+	if not folder:FindFirstChild("OnRamp") then
+		local ramp = Instance.new("Model")
+		ramp.Name = "OnRamp"
+		local asphalt = Color3.fromRGB(50, 62, 72)
+		part(
+			ramp,
+			"AccelerationLane",
+			Vector3.new(30, 1, 640),
+			Vector3.new(H.X + Config.Ramp.XOffset, H.Y - 0.5, 192),
+			asphalt,
+			Enum.Material.Asphalt
+		)
+		for _, x in { 78, 130 } do
+			part(
+				ramp,
+				"RampBarrier",
+				Vector3.new(1.5, 3, 640),
+				Vector3.new(H.X + x, H.Y + 1.5, 192),
+				Color3.fromRGB(150, 174, 181)
+			)
+		end
+		local from = Vector3.new(H.X + Config.Ramp.XOffset, H.Y - 0.5, -120)
+		local to = Vector3.new(H.X + 59, H.Y - 0.5, -352)
+		local merge = part(
+			ramp,
+			"MergeLane",
+			Vector3.new(26, 1, (to - from).Magnitude + 12),
+			(from + to) / 2,
+			asphalt,
+			Enum.Material.Asphalt
+		)
+		merge.CFrame = CFrame.lookAt((from + to) / 2, to)
+		for z = -80, 460, 60 do
+			part(
+				ramp,
+				"RampCenterDash",
+				Vector3.new(0.5, 0.04, 20),
+				Vector3.new(H.X + Config.Ramp.XOffset, H.Y + 0.025, z),
+				Color3.fromRGB(255, 217, 121)
+			).CanCollide =
+				false
+		end
+		for _, z in { 0, 192, 384 } do
+			part(
+				ramp,
+				"RampLightPost",
+				Vector3.new(1, 24, 1),
+				Vector3.new(H.X + 132, H.Y + 12, z),
+				Color3.fromRGB(98, 121, 138)
+			)
+			local lamp = part(
+				ramp,
+				"RampLamp",
+				Vector3.new(12, 0.5, 3),
+				Vector3.new(H.X + 124, H.Y + 24, z),
+				Color3.fromRGB(255, 214, 158),
+				Enum.Material.Neon
+			)
+			downlight(lamp)
+		end
+		local board = part(
+			ramp,
+			"MergeSign",
+			Vector3.new(30, 7, 1),
+			Vector3.new(H.X + Config.Ramp.XOffset, H.Y + 13, -80),
+			Color3.fromRGB(32, 96, 160)
+		)
+		local gui = Instance.new("SurfaceGui")
+		gui.Face, gui.Parent = Enum.NormalId.Back, board
+		local label = Instance.new("TextLabel")
+		label.Size, label.BackgroundTransparency = UDim2.fromScale(1, 1), 1
+		label.Text, label.TextScaled, label.Font = "A1 AUTOBAHN\nMERGE LEFT AHEAD", true, Enum.Font.GothamBold
+		label.TextColor3, label.Parent = Color3.new(1, 1, 1), gui
+		ramp.Parent = folder
+	end
+	return CFrame.new(H.X + Config.Ramp.XOffset, H.Y + 3, Config.Ramp.StartZ)
+end
+
+function Highway.wrapCar(model: Model, body: BasePart)
+	local z = body.Position.Z
+	local wrapped = HighwayMath.wrap(z, H.HalfLength)
+	if math.abs(wrapped - z) < 0.01 then
+		return
+	end
+	Highway.prepare(wrapped)
+	local linear, angular = body.AssemblyLinearVelocity, body.AssemblyAngularVelocity
+	model:PivotTo(model:GetPivot() + Vector3.new(0, 0, wrapped - z))
+	body.AssemblyLinearVelocity, body.AssemblyAngularVelocity = linear, angular
+	-- Lets the local chase camera apply the same translation rather than lerp across the world.
+	model:SetAttribute("HighwayWraps", ((model:GetAttribute("HighwayWraps") :: number?) or 0) + 1)
+end
+
+function Highway.update(dt: number, vehicles: Instance)
+	clock += dt
+	if clock < H.UpdateSeconds then
+		return
+	end
+	clock = 0
+	local positions = {}
+	for _, model in vehicles:GetChildren() do
+		if
+			model:IsA("Model")
+			and model:GetAttribute("Highway")
+			and model.PrimaryPart
+			and Driving.finite(model.PrimaryPart.Position.Z)
+		then
+			table.insert(positions, model.PrimaryPart.Position.Z)
+		end
+	end
+	-- Keep road underneath passengers/drivers who get out of a car, too.
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local root = if character then character:FindFirstChild("HumanoidRootPart") :: BasePart? else nil
+		if root and math.abs(root.Position.X - H.X) < 300 and Driving.finite(root.Position.Z) then
+			local wrapped = HighwayMath.wrap(root.Position.Z, H.HalfLength)
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid and not humanoid.SeatPart and math.abs(wrapped - root.Position.Z) > 0.01 then
+				Highway.prepare(wrapped)
+				character:PivotTo(character:GetPivot() + Vector3.new(0, 0, wrapped - root.Position.Z))
+			end
+			table.insert(positions, wrapped)
+		end
+	end
+	local needed = HighwayMath.needed(positions, H.ChunkLength, H.LoadRadius, H.HalfLength)
+	for index in needed do
+		build(index)
+	end
+	for index, model in chunks do
+		if not needed[index] then
+			model:Destroy()
+			chunks[index] = nil
+		end
+	end
+	Traffic.update(needed)
+	local count = 0
+	for _ in chunks do
+		count += 1
+	end
+	folder:SetAttribute("LoadedSections", count)
+end
+
+return Highway
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="Script" referent="21">
+        <Properties>
+          <string name="Name">Main</string>
+          <token name="RunContext">0</token>
+          <string name="Source"><![CDATA[--!strict
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
+local Config = require(ReplicatedStorage.Shared.Config)
+local Driving = require(ReplicatedStorage.Shared.Driving)
+local Rules = require(ReplicatedStorage.Shared.Rules)
+local Course = require(script.Parent.Course)
+local Vehicle = require(script.Parent.Vehicle)
+local Highway = require(script.Parent.Highway)
+local HighwayMath = require(ReplicatedStorage.Shared.HighwayMath)
+local Traffic = require(script.Parent.Traffic)
+local CrashEffect = require(script.Parent.CrashEffect)
+local CrashMath = require(ReplicatedStorage.Shared.CrashMath)
+
+-- This local handling lab must be deliberately redesigned before public release.
+if not RunService:IsStudio() then
+	warn("[REDLINE COUNTY] Development build disabled outside Studio.")
+	return
+end
+
+for _, name in { "Cars", "Characters", "Traffic" } do
+	if not PhysicsService:IsCollisionGroupRegistered(name) then
+		PhysicsService:RegisterCollisionGroup(name)
+	end
+end
+-- Ghost vehicles while tuning. No ramming/pushing in garage or on the course.
+PhysicsService:CollisionGroupSetCollidable("Cars", "Cars", false)
+PhysicsService:CollisionGroupSetCollidable("Cars", "Characters", false)
+PhysicsService:CollisionGroupSetCollidable("Cars", "Traffic", true)
+PhysicsService:CollisionGroupSetCollidable("Characters", "Traffic", false)
+PhysicsService:CollisionGroupSetCollidable("Traffic", "Traffic", false)
+Course.build()
+local folder = Instance.new("Folder")
+folder.Name, folder.Parent = "Vehicles", workspace
+local remotes = Instance.new("Folder")
+remotes.Name, remotes.Parent = "Remotes", ReplicatedStorage
+local function remote(name: string): RemoteEvent
+	local event = Instance.new("RemoteEvent")
+	event.Name, event.Parent = name, remotes
+	return event
+end
+local input, request, notice = remote("DriveInput"), remote("VehicleRequest"), remote("Notice")
+
+type State = {
+	car: Vehicle.Car?,
+	throttle: number,
+	steer: number,
+	drift: boolean,
+	lastInput: number,
+	lastOccupied: number,
+	nextSpawn: number,
+	nextReset: number,
+	inputBucket: Rules.Bucket,
+	requestBucket: Rules.Bucket,
+	spawning: boolean,
+	turboEnabled: boolean,
+	trip: number,
+	lastHighwayZ: number?,
+	previousCF: CFrame?,
+	previousTime: number,
+	crashUntil: number,
+	crashKind: string,
+}
+local states: { [Player]: State } = {}
+
+local function tell(player: Player, message: string)
+	player:SetAttribute("GarageMessage", message)
+	notice:FireClient(player, message)
+end
+
+local function rootOf(player: Player): BasePart?
+	local character = player.Character
+	return if character then character:FindFirstChild("HumanoidRootPart") :: BasePart? else nil
+end
+
+local function driving(player: Player, car: Vehicle.Car): boolean
+	local occupant = car.Seat.Occupant
+	return occupant ~= nil and occupant.Health > 0 and occupant.Parent == player.Character
+end
+
+local function clear(state: State)
+	if state.car then
+		state.car.Model:Destroy()
+		state.car = nil
+	end
+	state.throttle, state.steer, state.drift = 0, 0, false
+	state.previousCF = nil
+end
+
+local function freePad(exclude: Model?): CFrame?
+	local overlap = OverlapParams.new()
+	local ignore: { Instance } = { workspace.HandlingCourse }
+	if exclude then
+		table.insert(ignore, exclude)
+	end
+	overlap.FilterDescendantsInstances = ignore
+	-- Query includes non-colliding car trim and character roots, so occupied pads remain blocked.
+	for _, pad in Course.Pads do
+		if #workspace:GetPartBoundsInBox(pad, Vector3.new(18, 7, 25), overlap) == 0 then
+			return pad
+		end
+	end
+	return nil
+end
+
+local function hookEntry(player: Player, car: Vehicle.Car)
+	local prompt = car.Model:FindFirstChildOfClass("ProximityPrompt") :: ProximityPrompt
+	prompt.Triggered:Connect(function(who: Player)
+		local root = rootOf(who)
+		local humanoid = if who.Character then who.Character:FindFirstChildOfClass("Humanoid") else nil
+		if
+			who ~= player
+			or car.Model:GetAttribute("Crashed")
+			or not root
+			or not humanoid
+			or humanoid.Health <= 0
+			or car.Seat.Occupant
+			or humanoid.SeatPart
+		then
+			return
+		end
+		if
+			(root.Position - car.Seat.Position).Magnitude > 14
+			or car.Body.AssemblyLinearVelocity.Magnitude > 8
+		then
+			return
+		end
+		local ray = RaycastParams.new()
+		ray.FilterDescendantsInstances = { who.Character :: Model, car.Model }
+		if workspace:Raycast(root.Position, car.Seat.Position - root.Position, ray) then
+			return
+		end
+		car.Seat:Sit(humanoid)
+	end)
+	car.Seat:GetPropertyChangedSignal("Occupant"):Connect(function()
+		local occupant = car.Seat.Occupant
+		if occupant and occupant.Parent ~= player.Character then
+			occupant.Sit = false
+		end
+		prompt.Enabled = occupant == nil and not car.Model:GetAttribute("Crashed")
+		-- Seat welds can change assemblies; reassert server ownership after seating.
+		if car.Body.Parent and not car.Body.Anchored then
+			car.Body:SetNetworkOwner(nil)
+		end
+	end)
+end
+
+local function spawnCar(player: Player, kind: string, initial: boolean?)
+	local state, root = states[player], rootOf(player)
+	if not state or not root or state.spawning then
+		return
+	end
+	if not (Config.Cars :: any)[kind] then
+		tell(player, "Unknown vehicle.")
+		return
+	end
+	local now = os.clock()
+	local old = state.car
+	local speed = if old then old.Body.AssemblyLinearVelocity.Magnitude else 0
+	local other = old ~= nil and old.Seat.Occupant ~= nil and not driving(player, old)
+	if
+		not Rules.canSpawn(
+			(root.Position - Course.Garage).Magnitude,
+			speed,
+			other,
+			now,
+			state.nextSpawn,
+			Config.Lifecycle
+		)
+	then
+		tell(player, "Stop at the garage to change cars; spawn cooldown is 4 seconds.")
+		return
+	end
+	if not old and #folder:GetChildren() >= Config.MaxVehicles then
+		tell(player, "All 12 vehicles are in use. Try again shortly.")
+		return
+	end
+	local pad = if initial then Highway.entry() else freePad(if old then old.Model else nil)
+	if not pad then
+		tell(player, "All four bays are occupied. Clear a bay and try again.")
+		return
+	end
+	if initial then
+		local entry = Highway.entry()
+		local found = false
+		for slot = 0, Config.MaxVehicles - 1 do
+			local candidate = entry + Vector3.new(0, 0, slot * 24)
+			local available = true
+			for _, otherState in states do
+				if otherState.car and (otherState.car.Body.Position - candidate.Position).Magnitude < 18 then
+					available = false
+					break
+				end
+			end
+			if available then
+				pad = candidate
+				found = true
+				break
+			end
+		end
+		if not found then
+			tell(player, "Highway starting bays occupied. Try again shortly.")
+			return
+		end
+	end
+	state.spawning = true
+	state.nextSpawn = now + Config.SpawnCooldown
+	clear(state)
+	local car = Vehicle.create(folder, player, kind, pad)
+	state.car, state.spawning = car, false
+	state.lastOccupied = now
+	state.trip, state.lastHighwayZ = 0, nil
+	car.Model:SetAttribute("TurboEnabled", state.turboEnabled)
+	if initial then
+		car.Model:SetAttribute("Highway", true)
+		car.Model:SetAttribute("TripStuds", 0)
+		state.lastHighwayZ = pad.Position.Z
+		if player.Character then
+			player.Character:PivotTo(pad * CFrame.new(8, 1, 0))
+		end
+	end
+	hookEntry(player, car)
+	tell(
+		player,
+		if initial
+			then "SAFE ON-RAMP · Press E, accelerate, then merge left at the sign. Traffic impacts destroy your car."
+			else kind .. " ready. Press E beside your car."
+	)
+end
+
+local function resetCar(player: Player)
+	local state, root = states[player], rootOf(player)
+	if not state or not state.car or not root then
+		return
+	end
+	local car, now = state.car, os.clock()
+	if now < state.nextReset then
+		tell(player, "Recovery cooling down.")
+		return
+	end
+	if
+		not Rules.canReset(
+			car.Body.AssemblyLinearVelocity.Magnitude,
+			car.Body.CFrame.UpVector.Y,
+			driving(player, car),
+			(root.Position - car.Body.Position).Magnitude,
+			Config.Lifecycle
+		)
+	then
+		tell(player, "Stop first, or slow down while overturned. Stay beside your own car.")
+		return
+	end
+	local pad = freePad(car.Model)
+	if not pad then
+		tell(player, "Garage bays occupied. Recovery waits for a clear bay.")
+		return
+	end
+	state.nextReset = now + Config.ResetCooldown
+	state.throttle, state.steer, state.drift = 0, 0, false
+	car.Model:SetAttribute("Highway", false)
+	state.lastHighwayZ = nil
+	state.previousCF = nil
+	car.Model:PivotTo(pad)
+	car.Body.AssemblyLinearVelocity, car.Body.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+	car.Align.CFrame = pad.Rotation
+	car.Body:SetNetworkOwner(nil)
+	tell(player, "Recovered to the garage.")
+end
+
+local function enterHighway(player: Player)
+	local state = states[player]
+	if not state or not state.car then
+		tell(player, "Spawn a car and sit in it first.")
+		return
+	end
+	local car = state.car
+	if not driving(player, car) or car.Body.AssemblyLinearVelocity.Magnitude > Config.Lifecycle.StopSpeed then
+		tell(player, "Sit in your car and stop before entering the Autobahn.")
+		return
+	end
+	if car.Model:GetAttribute("Highway") then
+		tell(player, "Already on the Autobahn. Stop and use Recover to return.")
+		return
+	end
+	if os.clock() < state.nextReset then
+		tell(player, "Travel cooling down.")
+		return
+	end
+	local pad = Highway.entry()
+	-- Choose a clear launch point along the shoulder. Ghost cars still get distinct launch spaces.
+	local found = false
+	for slot = 0, Config.MaxVehicles - 1 do
+		local candidate = pad + Vector3.new(0, 0, slot * 24)
+		local entryClear = true
+		for _, other in states do
+			if
+				other.car
+				and other.car ~= car
+				and (other.car.Body.Position - candidate.Position).Magnitude < 18
+			then
+				entryClear = false
+				break
+			end
+		end
+		if entryClear then
+			pad = candidate
+			found = true
+			break
+		end
+	end
+	if not found then
+		tell(player, "Highway entry is occupied. Try again shortly.")
+		return
+	end
+	state.nextReset = os.clock() + Config.ResetCooldown
+	state.throttle, state.steer, state.drift = 0, 0, false
+	state.trip, state.lastHighwayZ = 0, pad.Position.Z
+	state.previousCF = nil
+	car.Model:SetAttribute("Highway", true)
+	car.Model:SetAttribute("TripStuds", 0)
+	car.Model:PivotTo(pad)
+	car.Body.AssemblyLinearVelocity, car.Body.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+	car.Align.CFrame, car.Steer = pad.Rotation, 0
+	car.Body:SetNetworkOwner(nil)
+	tell(player, "SAFE ON-RAMP · Follow the acceleration lane and merge left. Stop + R to return.")
+end
+
+local function crashCar(player: Player, state: State, contactTime: number)
+	local car = state.car
+	if not car or not CrashMath.canBegin(state.crashUntil > 0, true) then
+		return
+	end
+	state.crashUntil = os.clock() + Config.Crash.RecoverySeconds
+	state.nextSpawn, state.nextReset = state.crashUntil, state.crashUntil
+	state.crashKind = car.Model:GetAttribute("Kind") :: string
+	car.Model:SetAttribute("Crashed", true)
+	state.throttle, state.steer, state.drift = 0, 0, false
+	-- Stop at first swept contact, rather than leaving the wreck on the far side of traffic.
+	if state.previousCF then
+		car.Model:PivotTo(state.previousCF:Lerp(car.Body.CFrame, contactTime))
+	end
+	car.Body.AssemblyLinearVelocity, car.Body.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+	car.Body.Anchored = true
+	car.Drive.Force = Vector3.zero
+	car.Align.Enabled = false
+	for _, spring in car.Springs do
+		spring.Force = Vector3.zero
+	end
+	local prompt = car.Model:FindFirstChildOfClass("ProximityPrompt")
+	if prompt then
+		prompt.Enabled = false
+	end
+	CrashEffect.show(car.Model, car.Body)
+	tell(player, "CRASH! Car destroyed. Replacement at the safe on-ramp in 3 seconds.")
+end
+
+input.OnServerEvent:Connect(function(player: Player, throttle: any, steer: any, drift: any)
+	local state, now = states[player], os.clock()
+	if not state or not Rules.consume(state.inputBucket, now, 35, 45) then
+		return
+	end
+	if
+		not Driving.validInput(throttle, steer, drift)
+		or state.crashUntil > 0
+		or not state.car
+		or not driving(player, state.car)
+	then
+		return
+	end
+	state.throttle, state.steer, state.drift, state.lastInput = throttle, steer, drift, now
+end)
+
+request.OnServerEvent:Connect(function(player: Player, action: any, kind: any)
+	local state, now = states[player], os.clock()
+	if not state or not Rules.consume(state.requestBucket, now, 2, 3) then
+		return
+	end
+	if state.crashUntil > 0 then
+		tell(player, "Crash recovery in progress…")
+		return
+	end
+	if action == "Spawn" and type(kind) == "string" and #kind <= 20 then
+		spawnCar(player, kind)
+	elseif action == "Reset" then
+		resetCar(player)
+	elseif action == "Highway" then
+		enterHighway(player)
+	elseif action == "Turbo" and state.car and driving(player, state.car) then
+		state.turboEnabled = not state.turboEnabled
+		state.car.Model:SetAttribute("TurboEnabled", state.turboEnabled)
+		tell(
+			player,
+			if state.turboEnabled then "Turbo armed: accelerate to build boost." else "Turbo switched off."
+		)
+	end
+end)
+
+local function joined(player: Player)
+	if states[player] then
+		return
+	end
+	local now = os.clock()
+	states[player] = {
+		car = nil,
+		throttle = 0,
+		steer = 0,
+		drift = false,
+		lastInput = 0,
+		lastOccupied = now,
+		nextSpawn = 0,
+		nextReset = 0,
+		spawning = false,
+		turboEnabled = true,
+		trip = 0,
+		lastHighwayZ = nil,
+		previousCF = nil,
+		previousTime = workspace:GetServerTimeNow(),
+		crashUntil = 0,
+		crashKind = "Compact",
+		inputBucket = { tokens = 45, updated = now },
+		requestBucket = { tokens = 3, updated = now },
+	}
+	local function characterAdded(character: Model)
+		local function collision(item: Instance)
+			if item:IsA("BasePart") then
+				item.CollisionGroup = "Characters"
+			end
+		end
+		for _, item in character:GetDescendants() do
+			collision(item)
+		end
+		character.DescendantAdded:Connect(collision)
+		local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
+		character:WaitForChild("HumanoidRootPart", 10)
+		if humanoid then
+			humanoid.Died:Connect(function()
+				local state = states[player]
+				if state then
+					clear(state)
+				end -- Timers are kept through character resets.
+			end)
+		end
+		task.delay(1, function()
+			if states[player] and player.Character == character and not states[player].car then
+				spawnCar(player, "Compact", true)
+			end
+		end)
+	end
+	player.CharacterAdded:Connect(characterAdded)
+	if player.Character then
+		task.spawn(characterAdded, player.Character)
+	end
+end
+Players.PlayerAdded:Connect(joined)
+Players.PlayerRemoving:Connect(function(player)
+	if states[player] then
+		clear(states[player])
+		states[player] = nil
+	end
+end)
+for _, player in Players:GetPlayers() do
+	joined(player)
+end
+
+RunService.PreSimulation:Connect(function(dt: number)
+	local now = os.clock()
+	Highway.update(dt, folder)
+	Traffic.move()
+	local trafficTime = workspace:GetServerTimeNow()
+	for player, state in states do
+		if state.crashUntil > 0 then
+			local root = rootOf(player)
+			local humanoid = if player.Character
+				then player.Character:FindFirstChildOfClass("Humanoid")
+				else nil
+			if now >= state.crashUntil and root and humanoid and humanoid.Health > 0 then
+				clear(state)
+				humanoid.Sit = false
+				(player.Character :: Model):PivotTo(CFrame.new(Course.Garage + Vector3.new(0, 6, 0)))
+				root.AssemblyLinearVelocity, root.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
+				state.crashUntil, state.nextSpawn = 0, 0
+				spawnCar(player, state.crashKind, true)
+			end
+			continue
+		end
+		local car = state.car
+		if not car then
+			continue
+		end
+		local occupied = driving(player, car)
+		if car.Model:GetAttribute("Highway") then
+			local contact = Traffic.contact(
+				car.Body,
+				state.previousCF,
+				if state.previousCF then state.previousTime else trafficTime,
+				trafficTime
+			)
+			if contact then
+				crashCar(player, state, contact)
+				continue
+			end
+		end
+		if occupied then
+			state.lastOccupied = now
+		end
+		if not occupied or now - state.lastInput > Config.InputTimeout then
+			state.throttle, state.steer, state.drift = 0, 0, false
+		end
+		if
+			car.Body.Position.Y < -35
+			or not Driving.finite(car.Body.Position.X)
+			or car.Body.AssemblyLinearVelocity.Magnitude > Config.PhysicsSpeedLimit
+		then
+			clear(state)
+			tell(
+				player,
+				"Vehicle removed after leaving the course or exceeding the physics limit. Return to the garage."
+			)
+		elseif not occupied and now - state.lastOccupied > Config.AbandonedSeconds then
+			clear(state)
+			tell(player, "Unused car returned to the garage. Spawn another when ready.")
+		else
+			if car.Model:GetAttribute("Highway") then
+				Highway.wrapCar(car.Model, car.Body)
+				local z = car.Body.Position.Z
+				if state.lastHighwayZ then
+					state.trip += HighwayMath.travel(
+						state.lastHighwayZ,
+						z,
+						Config.Highway.HalfLength,
+						Config.PhysicsSpeedLimit * math.min(dt, 0.25) + 5
+					)
+				end
+				state.lastHighwayZ = z
+			end
+			Vehicle.step(
+				car,
+				math.min(dt, 1 / 20),
+				state.throttle,
+				state.steer,
+				state.drift,
+				state.turboEnabled and occupied
+			)
+			state.previousCF, state.previousTime = car.Body.CFrame, trafficTime
+			if car.TelemetryClock == 0 then
+				car.Model:SetAttribute("TripStuds", math.floor(state.trip))
+			end
+		end
+	end
+end)
+print("[REDLINE COUNTY] Autobahn + turbo prototype ready. Server-owned chassis; no economy or persistence.")
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="22">
+        <Properties>
+          <string name="Name">Traffic</string>
+          <string name="Source"><![CDATA[--!strict
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.Shared.Config)
+local TrafficMath = require(ReplicatedStorage.Shared.TrafficMath)
+local HighwayMath = require(ReplicatedStorage.Shared.HighwayMath)
+local CrashMath = require(ReplicatedStorage.Shared.CrashMath)
+local Traffic = {}
+local folder = Instance.new("Folder")
+folder.Name, folder.Parent = "HighwayTraffic", workspace
+local epoch = workspace:GetServerTimeNow()
+folder:SetAttribute("Epoch", epoch)
+local models: { [number]: Model } = {}
+local colors = {
+	Color3.fromRGB(224, 170, 77),
+	Color3.fromRGB(87, 150, 192),
+	Color3.fromRGB(225, 229, 215),
+	Color3.fromRGB(182, 72, 76),
+}
+
+local function build(id: number, lane: number, slot: number): Model
+	local model = Instance.new("Model")
+	model.Name = "Traffic_" .. id
+	model:SetAttribute("Lane", lane)
+	model:SetAttribute("Slot", slot)
+	local function part(name: string, size: Vector3, cf: CFrame, color: Color3): Part
+		local p = Instance.new("Part")
+		p.Name, p.Size, p.CFrame, p.Color = name, size, cf, color
+		p.Anchored, p.CanCollide, p.CanTouch, p.CanQuery = true, false, false, false
+		p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+		p.Parent = model
+		return p
+	end
+	local body = part("Body", Vector3.new(5.4, 1.4, 10), CFrame.new(), colors[id % #colors + 1])
+	body.Size = Vector3.new(5.8, 3, 10)
+	body.Transparency = 1
+	body.CanCollide, body.CanQuery = true, true
+	body.CollisionGroup = "Traffic"
+	part("Paint", Vector3.new(5.4, 1.4, 10), CFrame.new(), colors[id % #colors + 1])
+	model.PrimaryPart = body
+	part("Cabin", Vector3.new(4.4, 1.6, 4.5), CFrame.new(0, 1.5, 0.5), Color3.fromRGB(42, 61, 77))
+	for _, x in { -2.8, 2.8 } do
+		for _, z in { -3.2, 3.2 } do
+			part("Wheel", Vector3.new(0.7, 2, 2), CFrame.new(x, -0.7, z), Color3.fromRGB(21, 25, 31)).Shape =
+				Enum.PartType.Cylinder
+		end
+	end
+	for _, x in { -1.8, 1.8 } do
+		local lens =
+			part("Headlamp", Vector3.new(1, 0.4, 0.2), CFrame.new(x, 0, -5.1), Color3.fromRGB(255, 236, 189))
+		lens.Material = Enum.Material.Neon
+		if x < 0 then
+			local beam = Instance.new("SpotLight")
+			beam.Name, beam.Face = "TrafficHeadlight", Enum.NormalId.Front
+			beam.Range, beam.Angle, beam.Brightness = 50, 65, 1.5
+			beam.Color, beam.Shadows, beam.Enabled = lens.Color, false, false
+			beam.Parent = lens
+		end
+		part("TailLamp", Vector3.new(1, 0.4, 0.2), CFrame.new(x, 0, 5.1), Color3.fromRGB(255, 73, 86)).Material =
+			Enum.Material.Neon
+	end
+	return model
+end
+
+function Traffic.update(needed: { [number]: boolean })
+	local H = Config.Highway
+	local elapsed = workspace:GetServerTimeNow() - epoch
+	for lane = 1, 6 do
+		for slot = 0, Config.TrafficPerLane - 1 do
+			local id = (lane - 1) * Config.TrafficPerLane + slot
+			local x, z, direction =
+				TrafficMath.position(lane, slot, elapsed, H.HalfLength, Config.TrafficPerLane)
+			local model = models[id]
+			if needed[math.floor(-z / H.ChunkLength)] then
+				if not model then
+					model = build(id, lane, slot)
+					models[id] = model
+				end
+				model:PivotTo(
+					CFrame.new(H.X + x, H.Y + 1.8, z)
+						* CFrame.Angles(0, if direction > 0 then math.pi else 0, 0)
+				)
+				model.Parent = folder
+			elseif model then
+				model:Destroy()
+				models[id] = nil
+			end
+		end
+	end
+	folder:SetAttribute("ActiveCars", #folder:GetChildren())
+end
+
+function Traffic.move()
+	local H = Config.Highway
+	local elapsed = workspace:GetServerTimeNow() - epoch
+	for _, model in models do
+		local lane, slot = model:GetAttribute("Lane") :: number, model:GetAttribute("Slot") :: number
+		local x, z, direction = TrafficMath.position(lane, slot, elapsed, H.HalfLength, Config.TrafficPerLane)
+		model:PivotTo(
+			CFrame.new(H.X + x, H.Y + 1.8, z) * CFrame.Angles(0, if direction > 0 then math.pi else 0, 0)
+		)
+	end
+end
+
+function Traffic.contact(body: BasePart, previous: CFrame?, previousTime: number, now: number): number?
+	local current = body.CFrame
+	local before = previous or current
+	if (current.Position - before.Position).Magnitude > 500 then
+		return nil
+	end
+	local H = Config.Highway
+	local axes = { Vector3.xAxis, Vector3.zAxis, current.RightVector, current.LookVector, Vector3.yAxis }
+	local earliest: number? = nil
+	for _, model in models do
+		local lane, slot = model:GetAttribute("Lane") :: number, model:GetAttribute("Slot") :: number
+		local x, z =
+			TrafficMath.position(lane, slot, previousTime - epoch, H.HalfLength, Config.TrafficPerLane)
+		local _, endZ = TrafficMath.position(lane, slot, now - epoch, H.HalfLength, Config.TrafficPerLane)
+		-- Unwrap relative movement; the space-recycling teleport is not a collision sweep.
+		local trafficStartZ = before.Position.Z + HighwayMath.wrap(z - before.Position.Z, H.HalfLength)
+		local trafficEndZ = trafficStartZ + HighwayMath.wrap(endZ - z, H.HalfLength)
+		local start = before.Position - Vector3.new(H.X + x, H.Y + 1.8, trafficStartZ)
+		local finish = current.Position - Vector3.new(H.X + x, H.Y + 1.8, trafficEndZ)
+		local a, b, extents = {}, {}, {}
+		for _, axis in axes do
+			table.insert(a, start:Dot(axis))
+			table.insert(b, finish:Dot(axis))
+			local carHalf = math.abs(axis:Dot(current.RightVector)) * body.Size.X / 2
+				+ math.abs(axis:Dot(current.UpVector)) * body.Size.Y / 2
+				+ math.abs(axis:Dot(current.LookVector)) * body.Size.Z / 2
+			local trafficHalf = math.abs(axis.X) * 2.9 + math.abs(axis.Y) * 1.5 + math.abs(axis.Z) * 5
+			table.insert(extents, carHalf + trafficHalf + Config.Crash.ContactMargin)
+		end
+		local hit = CrashMath.sweep(a, b, extents)
+		if hit and (not earliest or hit < earliest) then
+			earliest = hit
+		end
+	end
+	return earliest
+end
+
+return Traffic
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="23">
+        <Properties>
+          <string name="Name">Vehicle</string>
+          <string name="Source"><![CDATA[--!strict
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.Shared.Config)
+local Driving = require(ReplicatedStorage.Shared.Driving)
+local Turbo = require(ReplicatedStorage.Shared.Turbo)
+local HeadlightMath = require(ReplicatedStorage.Shared.HeadlightMath)
+
+local Appearance = require(script.Parent.VehicleAppearance)
+
+local Vehicle = {}
+export type Car = {
+	Model: Model,
+	Body: Part,
+	Seat: VehicleSeat,
+	Springs: { VectorForce },
+	Drive: VectorForce,
+	Align: AlignOrientation,
+	Ray: RaycastParams,
+	Tune: Driving.Tuning,
+	Steer: number,
+	Turbo: Turbo.State,
+	TelemetryClock: number,
+}
+
+function Vehicle.create(parent: Instance, owner: Player, kind: string, cf: CFrame): Car
+	local tune = (Config.Cars :: any)[kind]
+	local model = Instance.new("Model")
+	model.Name = "Car_" .. owner.UserId
+	model:SetAttribute("OwnerId", owner.UserId)
+	model:SetAttribute("Kind", kind)
+	local body = Instance.new("Part")
+	body.Name, body.Size, body.CFrame = "Chassis", Vector3.new(5.4, 1.1, 9), cf
+	body.Color = tune.Color
+	body.CustomPhysicalProperties = PhysicalProperties.new(1, 0.05, 0, 100, 100)
+	body.RootPriority = 127
+	body.CollisionGroup = "Cars"
+	body.Parent = model
+	model.PrimaryPart = body
+
+	local function trim(
+		name: string,
+		size: Vector3,
+		offset: CFrame,
+		color: Color3,
+		shape: Enum.PartType?
+	): Part
+		local p = Instance.new("Part")
+		p.Name, p.Size, p.CFrame, p.Color = name, size, cf * offset, color
+		p.Shape = shape or Enum.PartType.Block
+		p.CanCollide, p.Massless = false, true
+		p.CollisionGroup = "Cars"
+		p.Parent = model
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0, weld.Part1, weld.Parent = body, p, p
+		return p
+	end
+	trim("Cabin", Vector3.new(4.4, 1.8, 3.6), CFrame.new(0, 1.3, 0.4), Color3.fromRGB(35, 53, 70))
+	trim("Roof", Vector3.new(4.5, 0.3, 3.7), CFrame.new(0, 2.3, 0.4), tune.Color)
+	for _, x in { -1.8, 1.8 } do
+		local lens = trim(
+			"Headlamp",
+			Vector3.new(1, 0.35, 0.2),
+			CFrame.new(x, 0.2, -4.55),
+			Color3.fromRGB(255, 243, 220)
+		)
+		lens.Material = Enum.Material.Neon
+		local attachment = Instance.new("Attachment")
+		attachment.Name = "HeadlightMount"
+		-- Fixed directly to the chassis: no independently followed or smoothed light position.
+		attachment.CFrame = CFrame.new(x, 0.2, -4.67) * CFrame.Angles(math.rad(-2), 0, 0)
+		attachment.Parent = body
+		local light = Instance.new("SpotLight")
+		light.Name, light.Face = "AdaptiveHeadlight", Enum.NormalId.Front
+		light.Color = lens.Color
+		light.Range, light.Angle, light.Brightness = HeadlightMath.beam(0, Config.Headlights)
+		light.Shadows = false
+		light.Parent = attachment
+		trim("TailLamp", Vector3.new(1, 0.35, 0.2), CFrame.new(x, 0.2, 4.55), Color3.fromRGB(255, 83, 102)).Material =
+			Enum.Material.Neon
+	end
+	-- Original front-mounted intercooler geometry for the turbo-equipped prototype cars.
+	trim(
+		"Intercooler",
+		Vector3.new(2.6, 0.65, 0.22),
+		CFrame.new(0, -0.1, -4.65),
+		Color3.fromRGB(130, 159, 171)
+	)
+	for y = -0.3, 0.15, 0.15 do
+		trim("CoolingFin", Vector3.new(2.4, 0.04, 0.05), CFrame.new(0, y, -4.79), Color3.fromRGB(37, 50, 61))
+	end
+	if kind == "Interceptor" then
+		for _, x in { -1, 1 } do
+			trim(
+				"Lightbar",
+				Vector3.new(1.8, 0.35, 0.6),
+				CFrame.new(x, 2.65, 0.4),
+				if x < 0 then Color3.fromRGB(255, 90, 110) else Color3.fromRGB(83, 194, 255)
+			).Material =
+				Enum.Material.Neon
+		end
+	end
+	local springs = {}
+	for _, x in { -2.3, 2.3 } do
+		for _, z in { -3.1, 3.1 } do
+			trim(
+				"Wheel",
+				Vector3.new(0.8, 2, 2),
+				CFrame.new(x * 1.22, -1, z),
+				Color3.fromRGB(23, 27, 34),
+				Enum.PartType.Cylinder
+			)
+			trim(
+				"Rim",
+				Vector3.new(0.85, 1.2, 1.2),
+				CFrame.new(x * 1.22, -1, z),
+				Color3.fromRGB(175, 193, 196),
+				Enum.PartType.Cylinder
+			)
+			local attachment = Instance.new("Attachment")
+			attachment.Position = Vector3.new(x, 0, z)
+			attachment.Parent = body
+			local spring = Instance.new("VectorForce")
+			spring.Name = "Suspension"
+			spring.Attachment0 = attachment
+			spring.RelativeTo = Enum.ActuatorRelativeTo.World
+			spring.Force = Vector3.zero
+			spring.Parent = body
+			table.insert(springs, spring)
+		end
+	end
+	local center = Instance.new("Attachment")
+	center.Parent = body
+	local drive = Instance.new("VectorForce")
+	drive.Name, drive.Attachment0 = "Drive", center
+	drive.RelativeTo = Enum.ActuatorRelativeTo.World
+	drive.ApplyAtCenterOfMass = true
+	drive.Force = Vector3.zero
+	drive.Parent = body
+	local align = Instance.new("AlignOrientation")
+	align.Name = "Stability"
+	align.Mode = Enum.OrientationAlignmentMode.OneAttachment
+	align.Attachment0 = center
+	align.Responsiveness = 12
+	align.MaxAngularVelocity = 4
+	align.CFrame = cf.Rotation
+	align.Parent = body
+	local seat = Instance.new("VehicleSeat")
+	seat.Name, seat.Size, seat.CFrame = "DriverSeat", Vector3.new(2, 0.5, 2), cf * CFrame.new(0, 1.5, 0.3)
+	seat.Transparency, seat.CanCollide, seat.Massless = 1, false, true
+	seat.Torque, seat.MaxSpeed, seat.TurnSpeed = 0, 0, 0
+	seat.HeadsUpDisplay = false
+	seat.Disabled = true -- Only the owner-authorized prompt can seat a driver.
+	seat.CollisionGroup = "Cars"
+	seat.Parent = model
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0, weld.Part1, weld.Parent = body, seat, seat
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText, prompt.ObjectText = "Drive", kind .. " · " .. owner.DisplayName
+	prompt.MaxActivationDistance = 12
+	prompt.RequiresLineOfSight = true
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	-- Exclude the whole car from the prompt's camera visibility ray. Parenting
+	-- to the interior seat excludes only the seat, so the cabin hides the UI.
+	prompt.Parent = model
+	model.Parent = parent
+	Appearance.attach(model, body, kind)
+	body:SetNetworkOwner(nil)
+	local ray = RaycastParams.new()
+	ray.FilterType = Enum.RaycastFilterType.Exclude
+	ray.FilterDescendantsInstances = { parent, workspace:WaitForChild("HighwayTraffic") }
+	-- Use solid world geometry, including Terrain and parts outside the course.
+	-- Cars/Characters do not collide with this query group.
+	ray.CollisionGroup = "Cars"
+	ray.RespectCanCollide = true
+	ray.IgnoreWater = true
+	return {
+		Model = model,
+		Body = body,
+		Seat = seat,
+		Springs = springs,
+		Drive = drive,
+		Align = align,
+		Ray = ray,
+		Tune = tune,
+		Steer = 0,
+		Turbo = { boost = 0, heat = 0, overheated = false },
+		TelemetryClock = 0,
+	}
+end
+
+function Vehicle.step(
+	car: Car,
+	dt: number,
+	throttle: number,
+	steer: number,
+	drift: boolean,
+	turboEnabled: boolean
+)
+	local body = car.Body
+	local mass = body.AssemblyMass
+	local boost = Turbo.step(
+		car.Turbo,
+		dt,
+		turboEnabled,
+		throttle,
+		body.AssemblyLinearVelocity:Dot(body.CFrame.LookVector),
+		drift,
+		Config.Turbo
+	)
+	car.TelemetryClock += dt
+	if car.TelemetryClock >= 0.1 then
+		car.TelemetryClock = 0
+		car.Model:SetAttribute("Boost", boost)
+		car.Model:SetAttribute("TurboHeat", car.Turbo.heat)
+		car.Model:SetAttribute("TurboOverheated", car.Turbo.overheated)
+	end
+	car.Steer = Driving.approach(car.Steer, steer, Config.SteeringResponse, dt)
+	local steeringMotor = body:FindFirstChild("SteeringMotor")
+	if steeringMotor and steeringMotor:IsA("Motor6D") then
+		steeringMotor.C0 = (steeringMotor:GetAttribute("Rest") :: CFrame)
+			* CFrame.Angles(0, 0, -car.Steer * math.rad(120))
+	end
+	local grounded, normal = 0, Vector3.zero
+	for _, spring in car.Springs do
+		local origin = (spring.Attachment0 :: Attachment).WorldPosition
+		local hit = workspace:Raycast(origin, Vector3.new(0, -Config.Suspension.Reach, 0), car.Ray)
+		if hit and hit.Normal.Y > 0.45 then
+			grounded += 1
+			normal += hit.Normal
+			local velocity = body:GetVelocityAtPosition(origin)
+			local strength = workspace.Gravity / 4
+				+ (Config.Suspension.Rest - hit.Distance) * Config.Suspension.Spring
+				- velocity.Y * Config.Suspension.Damping
+			spring.Force = Vector3.new(0, math.clamp(strength * mass, 0, mass * workspace.Gravity), 0)
+		else
+			spring.Force = Vector3.zero
+		end
+	end
+	car.Align.Enabled = grounded >= 2
+	if grounded < 2 then
+		car.Drive.Force = Vector3.zero
+		return
+	end
+	local up = normal.Unit
+	local forward = body.CFrame.LookVector
+	forward -= up * forward:Dot(up)
+	if forward.Magnitude < 0.1 then
+		car.Drive.Force = Vector3.zero
+		return
+	end
+	forward = forward.Unit
+	local right = forward:Cross(up).Unit
+	local velocity = body.AssemblyLinearVelocity
+	local acceleration, lateral, turn = Driving.forces(
+		velocity:Dot(forward),
+		velocity:Dot(right),
+		throttle,
+		car.Steer,
+		drift,
+		car.Tune,
+		boost
+	)
+	car.Drive.Force = (forward * acceleration + right * lateral) * mass
+	local heading = CFrame.fromAxisAngle(up, turn * dt):VectorToWorldSpace(forward)
+	-- Lead the orientation target slightly; otherwise responsiveness would attenuate yaw every frame.
+	local target = CFrame.fromAxisAngle(up, turn * 0.16):VectorToWorldSpace(heading)
+	car.Align.CFrame = CFrame.lookAt(Vector3.zero, target, up)
+	car.Align.MaxTorque = mass * 6000
+end
+
+return Vehicle
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="24">
+        <Properties>
+          <string name="Name">VehicleAppearance</string>
+          <string name="Source"><![CDATA[--!strict
+-- Import geometry only. Asset scripts, joints, seats and controllers never enter Workspace.
+local AssetService = game:GetService("AssetService")
+local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+local ModelFit = require(game:GetService("ReplicatedStorage").Shared.ModelFit)
+local Cockpit = require(script.Parent.Cockpit)
+local Appearance = {}
+local template: Model? = nil
+local pending: { [Model]: BasePart } = {}
+local failure: string? = nil
+
+local function prepare(source: Model): Model
+	local visual = Instance.new("Model")
+	visual.Name = "ImportedCarAppearance"
+	local seat = source:FindFirstChildWhichIsA("VehicleSeat", true)
+	-- Prefer the authored driver seat when a model contains multiple seats.
+	for _, item in source:GetDescendants() do
+		if item:IsA("VehicleSeat") and (item.Name == "DriveSeat" or item.Name == "DriverSeat") then
+			seat = item
+			break
+		end
+	end
+	local bounds = source:GetBoundingBox()
+	local orientation = if seat then seat.CFrame.Rotation else bounds.Rotation
+	orientation *= CFrame.Angles(0, math.rad(Config.DefaultCarAppearance.YawDegrees), 0)
+	for _, item in source:GetDescendants() do
+		if
+			item:IsA("BasePart")
+			and not item:IsA("Seat")
+			and not item:IsA("VehicleSeat")
+			and item.Transparency < 1
+		then
+			local part = item:Clone() :: BasePart
+			part:ClearAllChildren()
+			for _, child in item:GetChildren() do
+				if child:IsA("DataModelMesh") or child:IsA("Decal") or child:IsA("SurfaceAppearance") then
+					local decoration: Instance = (child :: Instance):Clone()
+					decoration:ClearAllChildren()
+					decoration.Parent = part
+				end
+			end
+			local partName = string.lower(item.Name)
+			if
+				item.Material == Enum.Material.Glass
+				or string.find(partName, "windshield", 1, true)
+				or string.find(partName, "windscreen", 1, true)
+			then
+				part.Transparency = math.max(part.Transparency, 0.65)
+			end
+			local ancestor: Instance? = item
+			while ancestor and ancestor ~= source do
+				local name = string.lower(ancestor.Name):gsub("[%s_]", "")
+				if string.find(name, "steeringwheel", 1, true) or name == "steer" then
+					part.Transparency = 1
+				end
+				ancestor = ancestor.Parent
+			end
+			part.CFrame = orientation:Inverse() * item.CFrame
+			part.Anchored, part.Massless = true, true
+			part.CanCollide, part.CanTouch, part.CanQuery = false, false, false
+			part.CollisionGroup = "Cars"
+			part.Parent = visual
+		end
+	end
+	assert(#visual:GetChildren() > 0, "Asset contains no visible car parts")
+	local originalBox, size = visual:GetBoundingBox()
+	-- Fix the pivot explicitly so the seat and all cloned geometry share one transform.
+	local pivot = originalBox.Position
+	visual.WorldPivot = CFrame.new(pivot)
+	assert(size.X > 0 and size.Z > 0, "Asset has invalid bounds")
+	local scale =
+		math.min(Config.DefaultCarAppearance.Width / size.X, Config.DefaultCarAppearance.Length / size.Z)
+	visual:ScaleTo(scale)
+	local box, fitted = visual:GetBoundingBox()
+	-- Centre on our chassis and align tyre bottoms to the existing suspension geometry.
+	local offset = Vector3.new(box.Position.X, box.Position.Y - fitted.Y / 2 + 2, box.Position.Z)
+	for _, item in visual:GetChildren() do
+		local part = item :: BasePart
+		part.CFrame = CFrame.new(-offset) * part.CFrame
+	end
+	local driver = Vector3.new(-fitted.X * 0.23, 0.4, 0.5)
+	if seat then
+		local authored = (orientation:Inverse() * seat.CFrame).Position
+		driver = Vector3.new(
+			ModelFit.coordinate(authored.X, pivot.X, scale, offset.X),
+			ModelFit.coordinate(authored.Y, pivot.Y, scale, offset.Y),
+			ModelFit.coordinate(authored.Z, pivot.Z, scale, offset.Z)
+		)
+	end
+	visual:SetAttribute("DriverOffset", driver + Config.DefaultCarAppearance.SeatAdjustment)
+	visual:SetAttribute("HullSize", Vector3.new(fitted.X * 0.92, 1.1, fitted.Z * 0.96))
+	return visual
+end
+
+local function apply(model: Model, body: BasePart)
+	local ready = template
+	if not ready or not model.Parent or not body.Parent or model:GetAttribute("Crashed") then
+		return
+	end
+	local visual = ready:Clone()
+	for _, item in visual:GetChildren() do
+		local part = item :: BasePart
+		part.CFrame = body.CFrame * part.CFrame
+		part.Anchored = false
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0, weld.Part1 = body, part
+		weld.Parent = part
+	end
+	-- Preserve chassis, native headlight mounts and seat, but hide the placeholder shell.
+	for _, item in model:GetChildren() do
+		if item:IsA("BasePart") then
+			item.Transparency = 1
+		end
+	end
+	visual.Parent = model
+	body.Size = visual:GetAttribute("HullSize") :: Vector3
+	for _, item in body:GetChildren() do
+		if item:IsA("VectorForce") and item.Name == "Suspension" and item.Attachment0 then
+			local mount = item.Attachment0
+			mount.Position = Vector3.new(
+				math.sign(mount.Position.X) * body.Size.X * 0.42,
+				0,
+				math.sign(mount.Position.Z) * body.Size.Z * 0.34
+			)
+		end
+		if item:IsA("Attachment") and item.Name == "HeadlightMount" then
+			item.Position =
+				Vector3.new(math.sign(item.Position.X) * body.Size.X * 0.33, 0.2, -body.Size.Z / 2 - 0.17)
+		end
+	end
+	Cockpit.install(model, body, visual:GetAttribute("DriverOffset") :: Vector3)
+	model:SetAttribute("AppearanceAssetId", Config.DefaultCarAppearance.AssetId)
+	model:SetAttribute("AppearanceStatus", "Loaded")
+end
+
+function Appearance.attach(model: Model, body: BasePart, kind: string)
+	if kind ~= "Compact" then
+		return
+	end
+	model:SetAttribute("RequestedAppearanceAssetId", Config.DefaultCarAppearance.AssetId)
+	if template then
+		apply(model, body)
+	elseif failure then
+		model:SetAttribute("AppearanceStatus", "Failed: " .. failure)
+	else
+		model:SetAttribute("AppearanceStatus", "Loading")
+		pending[model] = body
+	end
+end
+
+-- One request per server, independent of spawning and driving. A failed load keeps the starter usable.
+task.spawn(function()
+	local loaded: Instance? = nil
+	local ok, result = pcall(function()
+		loaded = AssetService:LoadAssetAsync(Config.DefaultCarAppearance.AssetId)
+		assert(loaded and loaded:IsA("Model"), "Asset is not a Model")
+		return prepare(loaded :: Model)
+	end)
+	if loaded then
+		loaded:Destroy()
+	end
+	if ok then
+		template = result :: Model
+	else
+		failure = tostring(result)
+		warn(
+			"Default car asset "
+				.. Config.DefaultCarAppearance.AssetId
+				.. " could not load: "
+				.. tostring(failure)
+		)
+	end
+	for model, body in pending do
+		if ok then
+			apply(model, body)
+		elseif model.Parent then
+			model:SetAttribute("AppearanceStatus", "Failed: " .. tostring(failure))
+		end
+	end
+	table.clear(pending)
+end)
+
+return Appearance
+]]></string>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="SoundService" referent="25">
+    <Properties>
+      <string name="Name">SoundService</string>
+      <bool name="RespectFilteringEnabled">true</bool>
+    </Properties>
+  </Item>
+  <Item class="StarterPlayer" referent="26">
+    <Properties>
+      <string name="Name">StarterPlayer</string>
+    </Properties>
+    <Item class="StarterPlayerScripts" referent="27">
+      <Properties>
+        <string name="Name">StarterPlayerScripts</string>
+      </Properties>
+      <Item class="Folder" referent="28">
+        <Properties>
+          <string name="Name">Client</string>
+        </Properties>
+        <Item class="LocalScript" referent="29">
+          <Properties>
+            <string name="Name">Main</string>
+            <string name="Source"><![CDATA[--!strict
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local ContextActionService = game:GetService("ContextActionService")
+local UserInputService = game:GetService("UserInputService")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Units = require(ReplicatedStorage.Shared.Units)
+local player = Players.LocalPlayer
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local driveInput = remotes:WaitForChild("DriveInput") :: RemoteEvent
+local request = remotes:WaitForChild("VehicleRequest") :: RemoteEvent
+local notice = remotes:WaitForChild("Notice") :: RemoteEvent
+
+local gui = Instance.new("ScreenGui")
+gui.Name, gui.ResetOnSpawn = "RedlineHUD", false
+gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+gui.Parent = player:WaitForChild("PlayerGui")
+local panel = Instance.new("Frame")
+panel.Position, panel.Size = UDim2.fromOffset(12, 12), UDim2.new(1, -24, 0, 184)
+panel.BackgroundColor3, panel.BackgroundTransparency = Color3.fromRGB(18, 28, 42), 0.08
+panel.Parent = gui
+local corner = Instance.new("UICorner")
+corner.CornerRadius, corner.Parent = UDim.new(0, 12), panel
+
+local function label(text: string, y: number, height: number, size: number): TextLabel
+	local l = Instance.new("TextLabel")
+	l.Position, l.Size = UDim2.fromOffset(12, y), UDim2.new(1, -24, 0, height)
+	l.BackgroundTransparency = 1
+	l.Text, l.TextSize, l.TextWrapped = text, size, true
+	l.Font, l.TextColor3 = Enum.Font.GothamMedium, Color3.fromRGB(230, 241, 238)
+	l.TextXAlignment = Enum.TextXAlignment.Left
+	l.Parent = panel
+	return l
+end
+local title = label("REDLINE COUNTY  /  STARTING", 8, 24, 18)
+title.TextColor3 = Color3.fromRGB(255, 144, 127)
+local status = label("Loading your highway starting point…", 36, 32, 14)
+label("WASD / arrows: drive · Space/Shift: drift · T: turbo · F: exit · R: recover", 70, 28, 13)
+local buttons = Instance.new("Frame")
+buttons.Position, buttons.Size = UDim2.fromOffset(12, 108), UDim2.new(1, -24, 0, 64)
+buttons.BackgroundTransparency, buttons.Parent = 1, panel
+local grid = Instance.new("UIGridLayout")
+grid.CellSize, grid.CellPadding = UDim2.new(1 / 3, -4, 0.5, -3), UDim2.fromOffset(6, 0)
+grid.Parent = buttons
+for _, kind in { "Compact", "Coupe", "Interceptor", "Autobahn", "Turbo", "Recover" } do
+	local button = Instance.new("TextButton")
+	button.Text, button.TextSize = kind, 13
+	button.Font = Enum.Font.GothamBold
+	button.TextColor3, button.BackgroundColor3 = Color3.fromRGB(235, 246, 241), Color3.fromRGB(46, 85, 99)
+	button.Parent = buttons
+	button.Activated:Connect(function()
+		if kind == "Recover" then
+			request:FireServer("Reset")
+		elseif kind == "Autobahn" then
+			request:FireServer("Highway")
+		elseif kind == "Turbo" then
+			request:FireServer("Turbo")
+		else
+			request:FireServer("Spawn", kind)
+		end
+	end)
+end
+local speed = Instance.new("TextLabel")
+speed.AnchorPoint, speed.Position = Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -14)
+speed.Size = UDim2.fromOffset(270, 78)
+speed.BackgroundColor3, speed.BackgroundTransparency = Color3.fromRGB(18, 28, 42), 0.15
+speed.TextColor3, speed.TextSize, speed.Font = Color3.fromRGB(121, 239, 216), 16, Enum.Font.GothamBold
+speed.Text, speed.Parent = "GARAGE", gui
+
+notice.OnClientEvent:Connect(function(message: string)
+	status.Text = message
+end)
+local initial = player:GetAttribute("GarageMessage")
+if type(initial) == "string" then
+	status.Text = initial
+end
+
+local held: { [string]: boolean } = {}
+local active: BasePart? = nil
+local elapsed = 0
+local cameraPosition: Vector3? = nil
+local previousBodyPosition: Vector3? = nil
+local previousType: Enum.CameraType? = nil
+local previousFov = 70
+local controls = {
+	{
+		name = "Forward",
+		title = "GAS",
+		keys = { Enum.KeyCode.W, Enum.KeyCode.Up },
+		position = UDim2.new(1, -90, 1, -195),
+	},
+	{
+		name = "Reverse",
+		title = "BRAKE",
+		keys = { Enum.KeyCode.S, Enum.KeyCode.Down },
+		position = UDim2.new(1, -90, 1, -115),
+	},
+	{
+		name = "Left",
+		title = "◀",
+		keys = { Enum.KeyCode.A, Enum.KeyCode.Left },
+		position = UDim2.new(0, 22, 1, -115),
+	},
+	{
+		name = "Right",
+		title = "▶",
+		keys = { Enum.KeyCode.D, Enum.KeyCode.Right },
+		position = UDim2.new(0, 102, 1, -115),
+	},
+	{
+		name = "Drift",
+		title = "DRIFT",
+		keys = { Enum.KeyCode.Space, Enum.KeyCode.LeftShift },
+		position = UDim2.new(1, -170, 1, -115),
+	},
+	{ name = "Exit", title = "EXIT", keys = { Enum.KeyCode.F }, position = UDim2.new(0, 22, 1, -195) },
+}
+
+local function ownBody(): BasePart?
+	local character = player.Character
+	local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+	local seat = if humanoid then humanoid.SeatPart else nil
+	if not seat or not seat:IsA("VehicleSeat") then
+		return nil
+	end
+	local model = seat.Parent
+	if not model or not model:IsA("Model") or model:GetAttribute("OwnerId") ~= player.UserId then
+		return nil
+	end
+	return model.PrimaryPart
+end
+
+local hiddenParts: { [BasePart]: number } = {}
+local function stopControls()
+	for part, transparency in hiddenParts do
+		if part.Parent then
+			part.LocalTransparencyModifier = transparency
+		end
+	end
+	table.clear(hiddenParts)
+	for _, control in controls do
+		ContextActionService:UnbindAction("Redline" .. control.name)
+	end
+	table.clear(held)
+	driveInput:FireServer(0, 0, false)
+	local camera = workspace.CurrentCamera
+	if camera and previousType then
+		camera.CameraType = previousType
+		camera.FieldOfView = previousFov
+		local humanoid = if player.Character then player.Character:FindFirstChildOfClass("Humanoid") else nil
+		if humanoid then
+			camera.CameraSubject = humanoid
+		end
+	end
+	previousType, cameraPosition, previousBodyPosition = nil, nil, nil
+end
+
+local function startControls()
+	local camera = workspace.CurrentCamera
+	if camera then
+		previousType, previousFov = camera.CameraType, camera.FieldOfView
+	end
+	for _, control in controls do
+		ContextActionService:BindActionAtPriority(
+			"Redline" .. control.name,
+			function(_: string, state: Enum.UserInputState)
+				if state == Enum.UserInputState.Begin then
+					held[control.name] = true
+					if control.name == "Exit" then
+						local humanoid = if player.Character
+							then player.Character:FindFirstChildOfClass("Humanoid")
+							else nil
+						if humanoid then
+							humanoid.Sit = false
+						end
+					end
+				elseif state == Enum.UserInputState.End or state == Enum.UserInputState.Cancel then
+					held[control.name] = false
+				end
+				return Enum.ContextActionResult.Sink
+			end,
+			true,
+			3000,
+			table.unpack(control.keys)
+		)
+		ContextActionService:SetTitle("Redline" .. control.name, control.title)
+		ContextActionService:SetPosition("Redline" .. control.name, control.position)
+	end
+end
+
+ContextActionService:BindAction("RedlineTurbo", function(_: string, state: Enum.UserInputState)
+	if state == Enum.UserInputState.Begin and ownBody() then
+		request:FireServer("Turbo")
+	end
+	return Enum.ContextActionResult.Pass
+end, false, Enum.KeyCode.T)
+
+ContextActionService:BindAction("RedlineRecover", function(_: string, state: Enum.UserInputState)
+	if state == Enum.UserInputState.Begin then
+		request:FireServer("Reset")
+	end
+	return Enum.ContextActionResult.Pass
+end, false, Enum.KeyCode.R)
+UserInputService.WindowFocusReleased:Connect(function()
+	table.clear(held)
+	driveInput:FireServer(0, 0, false)
+end)
+UserInputService.TextBoxFocused:Connect(function()
+	table.clear(held)
+	driveInput:FireServer(0, 0, false)
+end)
+
+RunService:BindToRenderStep("RedlineCamera", Enum.RenderPriority.Camera.Value + 1, function(dt: number)
+	local body = ownBody()
+	local character = player.Character
+	local root = if character then character:FindFirstChild("HumanoidRootPart") :: BasePart? else nil
+	title.Text = if root and math.abs(root.Position.X - Config.Highway.X) < 300
+		then "REDLINE COUNTY / AUTOBAHN · TRAFFIC"
+		else "REDLINE COUNTY / GARAGE · CLICK AUTOBAHN TO ENTER"
+	if body ~= active then
+		if active then
+			stopControls()
+		end
+		active = body
+		if active then
+			startControls()
+		end
+	end
+	if not body then
+		speed.Text = "GARAGE"
+		return
+	end
+	local typing = UserInputService:GetFocusedTextBox() ~= nil
+	local throttle = if typing then 0 else (if held.Forward then 1 else 0) - (if held.Reverse then 1 else 0)
+	local steer = if typing then 0 else (if held.Right then 1 else 0) - (if held.Left then 1 else 0)
+	elapsed += dt
+	if elapsed >= 1 / Config.InputHz then
+		elapsed = 0
+		driveInput:FireServer(throttle, steer, not typing and held.Drift == true)
+	end
+	local velocity = body.AssemblyLinearVelocity
+	local model = body.Parent :: Model
+	local boost = (model:GetAttribute("Boost") :: number?) or 0
+	local heat = (model:GetAttribute("TurboHeat") :: number?) or 0
+	local turboState = if model:GetAttribute("TurboOverheated")
+		then "COOLING"
+		elseif model:GetAttribute("TurboEnabled") then "TURBO"
+		else "TURBO OFF"
+	local trip = if model:GetAttribute("Highway")
+		then string.format(
+			"AUTOBAHN · %.2f km",
+			Units.kilometres((model:GetAttribute("TripStuds") :: number?) or 0)
+		)
+		else "HANDLING LAB"
+	speed.Text = string.format(
+		"%03d km/h · %03d mph %s\n%s %02d%% · HEAT %02d%%\n%s",
+		math.floor(Units.kmh((velocity * Vector3.new(1, 0, 1)).Magnitude)),
+		math.floor(Units.mph((velocity * Vector3.new(1, 0, 1)).Magnitude)),
+		if held.Drift then "SLIDE" else "",
+		turboState,
+		boost * 100,
+		heat * 100,
+		trip
+	)
+	-- Translate the chase camera with recycled highway space to preserve the view.
+	if previousBodyPosition and cameraPosition then
+		local delta = body.Position - previousBodyPosition
+		if delta.Magnitude > 1000 then
+			cameraPosition += delta
+		end
+	end
+	previousBodyPosition = body.Position
+	local camera = workspace.CurrentCamera
+	if not camera then
+		return
+	end
+	camera.CameraType = Enum.CameraType.Scriptable
+	local eye = body:FindFirstChild("CockpitEye")
+	if eye and eye:IsA("Attachment") and not model:GetAttribute("Crashed") then
+		if character then
+			for _, part in character:GetDescendants() do
+				if part:IsA("BasePart") then
+					if hiddenParts[part] == nil then
+						hiddenParts[part] = part.LocalTransparencyModifier
+					end
+					part.LocalTransparencyModifier = 1
+				end
+			end
+		end
+		camera.CFrame = eye.WorldCFrame
+		camera.Focus = camera.CFrame * CFrame.new(0, 0, -40)
+		camera.FieldOfView = 80
+		return
+	end
+	local facing = body.CFrame.LookVector * Vector3.new(1, 0, 1)
+	if facing.Magnitude < 0.1 then
+		facing = Vector3.new(0, 0, -1)
+	end
+	facing = facing.Unit
+	local focus = body.Position + Vector3.new(0, 2, 0) + facing * math.min(velocity.Magnitude * 0.07, 7)
+	local desired = body.Position - facing * Config.CameraDistance + Vector3.new(0, Config.CameraHeight, 0)
+	local ray = RaycastParams.new()
+	ray.FilterType = Enum.RaycastFilterType.Exclude
+	ray.FilterDescendantsInstances = { body.Parent :: Instance }
+	ray.CollisionGroup = "Cars"
+	ray.RespectCanCollide = true
+	ray.IgnoreWater = true
+	local hit = workspace:Raycast(focus, desired - focus, ray)
+	if hit then
+		desired = hit.Position + hit.Normal * 1.2
+	end
+	local alpha = 1 - math.exp(-Config.CameraResponse * dt)
+	local prior = cameraPosition
+	cameraPosition = if prior and (prior - desired).Magnitude < 80
+		then prior:Lerp(desired, alpha)
+		else desired
+	-- Check the interpolated position too, so smoothing cannot cut through a barrier.
+	local obstruction = workspace:Raycast(focus, (cameraPosition :: Vector3) - focus, ray)
+	if obstruction then
+		cameraPosition = obstruction.Position + obstruction.Normal * 1.2
+	end
+	camera.CFrame = CFrame.lookAt(cameraPosition :: Vector3, focus)
+	camera.Focus = CFrame.new(focus)
+	camera.FieldOfView += (70 + math.min(velocity.Magnitude / 10, 10) - camera.FieldOfView) * alpha
+end)
+print("[REDLINE COUNTY] Driving HUD, keyboard/touch controls and chase camera ready.")
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="LocalScript" referent="30">
+          <Properties>
+            <string name="Name">NightLights</string>
+            <string name="Source"><![CDATA[--!strict
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Units = require(Shared.Units)
+local HeadlightMath = require(Shared.HeadlightMath)
+local RoadBeam = require(script.Parent.RoadBeam)
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local projected = true
+local gui = Instance.new("ScreenGui")
+gui.Name = "HeadlightMode"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+local button = Instance.new("TextButton")
+button.Size = UDim2.fromOffset(228, 30)
+button.Position = UDim2.new(0, 14, 1, -150)
+button.BackgroundColor3 = Color3.fromRGB(18, 31, 43)
+button.TextColor3 = Color3.fromRGB(125, 232, 224)
+button.TextSize = 14
+button.Text = "H · Headlights: road beam"
+button.Parent = gui
+local function toggle()
+	projected = not projected
+	button.Text = if projected then "H · Headlights: road beam" else "H · Headlights: native"
+end
+button.Activated:Connect(toggle)
+UserInputService.InputBegan:Connect(function(input, processed)
+	if not processed and input.KeyCode == Enum.KeyCode.H then
+		toggle()
+	end
+end)
+local traffic = workspace:WaitForChild("HighwayTraffic")
+local elapsed = 0
+type CarLights = { model: Model, body: BasePart, lights: { SpotLight } }
+local carLights: { CarLights } = {}
+
+-- Nearby traffic gets real light sources; distant cars retain visible neon lenses.
+-- These local visual changes never move traffic or alter collision state.
+RunService.Heartbeat:Connect(function(dt: number)
+	elapsed += dt
+	if elapsed < 0.2 then
+		return
+	end
+	elapsed = 0
+	local camera = workspace.CurrentCamera
+	local position = if camera then camera.CFrame.Position else Vector3.zero
+	local candidates: { { light: SpotLight, distance: number } } = {}
+	for _, model in traffic:GetChildren() do
+		local lamp = model:FindFirstChild("TrafficHeadlight", true)
+		if model:IsA("Model") and model.PrimaryPart and lamp and lamp:IsA("SpotLight") then
+			table.insert(
+				candidates,
+				{ light = lamp, distance = (model.PrimaryPart.Position - position).Magnitude }
+			)
+		end
+	end
+	table.sort(candidates, function(a, b)
+		return a.distance < b.distance
+	end)
+	for i, candidate in candidates do
+		candidate.light.Enabled = i <= 8 and candidate.distance < 300
+	end
+	-- Refresh references separately from per-frame updates; never interpolate a light transform.
+	table.clear(carLights)
+	local vehicles = workspace:FindFirstChild("Vehicles")
+	if vehicles then
+		for _, model in vehicles:GetChildren() do
+			if model:IsA("Model") and model.PrimaryPart then
+				local lights: { SpotLight } = {}
+				for _, lamp in model.PrimaryPart:GetDescendants() do
+					if lamp:IsA("SpotLight") and lamp.Name == "AdaptiveHeadlight" then
+						table.insert(lights, lamp)
+					end
+				end
+				table.insert(carLights, { model = model, body = model.PrimaryPart, lights = lights })
+			end
+		end
+	end
+end)
+
+RunService:BindToRenderStep("RedlineHeadlightRange", Enum.RenderPriority.Camera.Value + 2, function()
+	RoadBeam.hide()
+	for _, car in carLights do
+		if not car.model.Parent or not car.body.Parent then
+			continue
+		end
+		local speed = (car.body.AssemblyLinearVelocity * Vector3.new(1, 0, 1)).Magnitude
+		local range, angle, brightness = HeadlightMath.beam(Units.kmh(speed), Config.Headlights)
+		local owned = car.model:GetAttribute("OwnerId") == player.UserId
+		local alive = car.model:GetAttribute("Crashed") ~= true
+		if owned and alive and projected then
+			RoadBeam.update(car.body, range, player.Character)
+		end
+		for _, light in car.lights do
+			if light.Parent then
+				light.Enabled = alive and not (owned and projected)
+				light.Range, light.Angle, light.Brightness = range, angle, brightness
+				light.Shadows = car.model:GetAttribute("OwnerId") == player.UserId
+			end
+		end
+	end
+end)
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="31">
+          <Properties>
+            <string name="Name">RoadBeam</string>
+            <string name="Source"><![CDATA[--!strict
+-- Client-only road illumination approximation, independent of the light-grid refresh.
+-- Raycasts place a small, reusable beam mesh on the road each rendered frame.
+local RoadBeam = {}
+local STEPS = 10
+
+type Strip = { a: Attachment, b: Attachment, beam: Beam, side: number, step: number }
+local strips: { Strip } = {}
+local holder = Instance.new("Part")
+holder.Name = "LocalRoadBeams"
+holder.Anchored = true
+holder.Transparency = 1
+holder.Size = Vector3.one
+holder.CanCollide, holder.CanTouch, holder.CanQuery = false, false, false
+holder.Parent = workspace
+for _, side in { -1, 1 } do
+	for step = 1, STEPS do
+		local a, b = Instance.new("Attachment"), Instance.new("Attachment")
+		a.Parent, b.Parent = holder, holder
+		local beam = Instance.new("Beam")
+		beam.Name = "RoadLight"
+		beam.Attachment0, beam.Attachment1 = a, b
+		beam.FaceCamera = false
+		beam.LightEmission = 1
+		beam.LightInfluence = 0
+		beam.Color = ColorSequence.new(Color3.fromRGB(255, 241, 205))
+		beam.Segments = 1
+		local t0, t1 = (step - 1) / STEPS, step / STEPS
+		beam.Transparency = NumberSequence.new(0.78 + 0.22 * t0, 0.78 + 0.22 * t1)
+		beam.Enabled = false
+		beam.Parent = holder
+		table.insert(strips, { a = a, b = b, beam = beam, side = side, step = step })
+	end
+end
+local params = RaycastParams.new()
+params.RespectCanCollide = true
+params.FilterType = Enum.RaycastFilterType.Exclude
+
+function RoadBeam.hide()
+	for _, strip in strips do
+		strip.beam.Enabled = false
+	end
+end
+
+function RoadBeam.update(body: BasePart, range: number, character: Model?)
+	local forward = body.CFrame.LookVector * Vector3.new(1, 0, 1)
+	if forward.Magnitude < 0.1 or body.CFrame.UpVector.Y < 0.5 then
+		RoadBeam.hide()
+		return
+	end
+	forward = forward.Unit
+	local right = forward:Cross(Vector3.yAxis)
+	local exclude: { Instance } = { body.Parent :: Instance, holder }
+	if character then
+		table.insert(exclude, character)
+	end
+	params.FilterDescendantsInstances = exclude
+	-- Origin follows this frame's chassis transform, including turns and highway wraps.
+	for _, side in { -1, 1 } do
+		local origin = body.Position + forward * (body.Size.Z / 2 + 0.2) + right * (side * body.Size.X * 0.33)
+		local obstacle = workspace:Raycast(origin, forward * range, params)
+		local reach = if obstacle then math.max(0, obstacle.Distance - 1) else range
+		local points: { RaycastResult? } = {}
+		for i = 0, STEPS do
+			local distance = range * i / STEPS
+			local sample = origin + forward * distance
+			points[i + 1] = workspace:Raycast(sample + Vector3.yAxis * 2, -Vector3.yAxis * 10, params)
+		end
+		for _, strip in strips do
+			if strip.side ~= side then
+				continue
+			end
+			local a, b = points[strip.step], points[strip.step + 1]
+			local d0, d1 = range * (strip.step - 1) / STEPS, range * strip.step / STEPS
+			local valid = a ~= nil and b ~= nil and d1 <= reach
+			if a and b then
+				valid = valid
+					and a.Normal.Y > 0.85
+					and b.Normal.Y > 0.85
+					and math.abs(a.Position.Y - b.Position.Y) < 1
+				-- Attachment Y axes define the beam's width across the road.
+				strip.a.WorldCFrame = CFrame.fromMatrix(a.Position + a.Normal * 0.035, forward, right)
+				strip.b.WorldCFrame = CFrame.fromMatrix(b.Position + b.Normal * 0.035, forward, right)
+				strip.beam.Width0, strip.beam.Width1 = 2 + d0 * 0.16, 2 + d1 * 0.16
+			end
+			strip.beam.Enabled = valid
+		end
+	end
+end
+
+return RoadBeam
+]]></string>
+          </Properties>
+        </Item>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="Workspace" referent="32">
+    <Properties>
+      <string name="Name">Workspace</string>
+      <bool name="FilteringEnabled">true</bool>
+      <float name="Gravity">196.2</float>
+      <bool name="NeedsPivotMigration">false</bool>
+      <bool name="StreamingEnabled">false</bool>
+    </Properties>
+  </Item>
+</roblox>

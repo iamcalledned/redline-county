@@ -1,5 +1,9 @@
-# Generated Rojo builds and sourcemaps (source models outside build stay tracked).
-/build/
+# Keep the playable place files; ignore other generated build output.
+/build/*
+!/build/redline-county.rbxlx
+!/build/smoke.rbxlx
+
+# Generated sourcemap and Studio lock files.
 /sourcemap.json
 *.rbxl.lock
 *.rbxlx.lock
