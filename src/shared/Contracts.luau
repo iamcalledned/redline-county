@@ -1,0 +1,48 @@
+--!strict
+local Contracts = {
+	{
+		Mode = "courier",
+		Parkway = false,
+		Id = "first",
+		Name = "Hot Package",
+		Brief = "Grab the marked loot, lose one patrol, and bring it home.",
+		Checkpoints = { 3 },
+		Seconds = 240,
+		Heat = 1,
+		Reward = 300,
+	},
+	{
+		Mode = "courier",
+		Parkway = false,
+		Id = "circuit",
+		Name = "Town Hall Run",
+		Brief = "Collect five stashes around the town loop while two patrols chase you.",
+		Checkpoints = { 3, 11, 13, 19, 53 },
+		Seconds = 360,
+		Heat = 2,
+		Reward = 800,
+	},
+	{
+		Mode = "cargo",
+		Parkway = false,
+		Id = "double",
+		Name = "Fragile Cargo",
+		Brief = "Two pickups. Every impact damages your cargo and reduces your haul.",
+		Checkpoints = { 19, 11 },
+		Seconds = 270,
+		Heat = 2,
+		Reward = 600,
+	},
+	{
+		Mode = "heat",
+		Parkway = true,
+		Id = "parkway",
+		Name = "Heat Run",
+		Brief = "Bank each pickup or risk another for more money and stronger police.",
+		Checkpoints = { 69, 5, 37 },
+		Seconds = 420,
+		Heat = 1,
+		Reward = 350,
+	},
+}
+return Contracts

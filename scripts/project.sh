@@ -25,8 +25,10 @@ case "${1:-check}" in
     fi
     bash scripts/project.sh sourcemap
     "$lsp_binary" analyze --platform roblox --sourcemap sourcemap.json --definitions .tools/globalTypes.d.luau src
-    .tools/luau/luau-analyze tests/logic.luau src/shared/Driving.luau src/shared/Rules.luau src/shared/Turbo.luau src/shared/HighwayMath.luau src/shared/TrafficMath.luau src/shared/CrashMath.luau src/shared/Units.luau src/shared/HeadlightMath.luau src/shared/ModelFit.luau
+    .tools/luau/luau-analyze tests/logic.luau src/shared/Driving.luau src/shared/Rules.luau src/shared/Turbo.luau src/shared/HighwayMath.luau src/shared/TrafficMath.luau src/shared/CrashMath.luau src/shared/Units.luau src/shared/HeadlightMath.luau src/shared/ModelFit.luau src/shared/CockpitFit.luau src/shared/GarageRules.luau src/shared/TownDriving.luau src/shared/DrivingMetrics.luau src/shared/RoadNavigation.luau src/shared/GetawayRules.luau src/shared/Contracts.luau src/shared/RoadGraph.luau src/shared/Progression.luau src/shared/TownTrafficMath.luau src/shared/DriftRules.luau src/shared/LapRules.luau src/shared/ProfileRules.luau src/shared/MissionVariants.luau src/shared/VehicleMaterials.luau src/shared/PoliceTactics.luau src/shared/PerformanceSamples.luau
     ;;
+  map) exec bash scripts/generate-hopedale.sh ;;
+  map-test) exec python3 tests/test_hopedale.py ;;
   build)
     mkdir -p build
     rojo build default.project.json -o build/redline-county.rbxlx
@@ -37,7 +39,9 @@ case "${1:-check}" in
     selene src tests
     bash scripts/project.sh test
     bash scripts/project.sh typecheck
+    bash scripts/project.sh map-test
     bash scripts/project.sh build
+    python3 tests/test_vehicles.py
     ;;
-  *) echo 'Usage: bash scripts/project.sh {serve|smoke-serve|sourcemap|format|lint|test|typecheck|build|check}' >&2; exit 2 ;;
+  *) echo 'Usage: bash scripts/project.sh {serve|smoke-serve|sourcemap|format|lint|test|typecheck|map|map-test|build|check}' >&2; exit 2 ;;
 esac

@@ -94,6 +94,26 @@
         "typecheck"
       ],
       "problemMatcher": []
+    },
+    {
+      "label": "Redline: Bake Hopedale (offline)",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/project.sh",
+        "map"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Redline: Check geographic data",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/project.sh",
+        "map-test"
+      ],
+      "problemMatcher": []
     }
   ]
 }

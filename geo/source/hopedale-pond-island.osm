@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="openstreetmap-cgimap 2.1.0 (3498741 spike-06.openstreetmap.org)" copyright="OpenStreetMap and contributors" attribution="http://www.openstreetmap.org/copyright" license="http://opendatacommons.org/licenses/odbl/1-0/">
+ <node id="997223422" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T00:49:02Z" user="morganwahl" uid="221294" lat="42.1353518" lon="-71.5466761"/>
+ <node id="997225531" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T00:50:45Z" user="morganwahl" uid="221294" lat="42.1354508" lon="-71.5469255"/>
+ <node id="997232537" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T00:57:06Z" user="morganwahl" uid="221294" lat="42.1355966" lon="-71.5467387"/>
+ <node id="997234545" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T00:58:32Z" user="morganwahl" uid="221294" lat="42.1355678" lon="-71.5468694"/>
+ <node id="997244683" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:03:56Z" user="morganwahl" uid="221294" lat="42.1354914" lon="-71.5466027"/>
+ <node id="997248663" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:05:45Z" user="morganwahl" uid="221294" lat="42.1353591" lon="-71.5468090"/>
+ <node id="997259655" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:10:10Z" user="morganwahl" uid="221294" lat="42.1354577" lon="-71.5465889"/>
+ <node id="997265050" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:12:11Z" user="morganwahl" uid="221294" lat="42.1355262" lon="-71.5469059"/>
+ <node id="997269809" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:14:22Z" user="morganwahl" uid="221294" lat="42.1353788" lon="-71.5468716"/>
+ <node id="997280343" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:18:20Z" user="morganwahl" uid="221294" lat="42.1353890" lon="-71.5466287"/>
+ <node id="997283235" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:20:16Z" user="morganwahl" uid="221294" lat="42.1355994" lon="-71.5468029"/>
+ <node id="997291995" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:25:20Z" user="morganwahl" uid="221294" lat="42.1356050" lon="-71.5467582"/>
+ <node id="997302057" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:30:41Z" user="morganwahl" uid="221294" lat="42.1354267" lon="-71.5465989"/>
+ <node id="997304732" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:32:11Z" user="morganwahl" uid="221294" lat="42.1355201" lon="-71.5466271"/>
+ <node id="997307655" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:33:47Z" user="morganwahl" uid="221294" lat="42.1354103" lon="-71.5469079"/>
+ <node id="997307748" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:33:50Z" user="morganwahl" uid="221294" lat="42.1353439" lon="-71.5467047"/>
+ <way id="85929288" visible="true" version="1" changeset="6419369" timestamp="2010-11-21T01:46:08Z" user="morganwahl" uid="221294">
+  <nd ref="997248663"/>
+  <nd ref="997307748"/>
+  <nd ref="997223422"/>
+  <nd ref="997280343"/>
+  <nd ref="997302057"/>
+  <nd ref="997259655"/>
+  <nd ref="997244683"/>
+  <nd ref="997304732"/>
+  <nd ref="997232537"/>
+  <nd ref="997291995"/>
+  <nd ref="997283235"/>
+  <nd ref="997234545"/>
+  <nd ref="997265050"/>
+  <nd ref="997225531"/>
+  <nd ref="997307655"/>
+  <nd ref="997269809"/>
+  <nd ref="997248663"/>
+ </way>
+</osm>

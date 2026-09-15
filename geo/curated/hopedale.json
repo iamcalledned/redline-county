@@ -1,0 +1,41 @@
+{
+  "origin": {
+    "lat": 42.1289534,
+    "lon": -71.5398681,
+    "label": "Historic Town Hall OSM node 7241414065"
+  },
+  "crs": "EPSG:26986",
+  "metres_per_stud": 0.28,
+  "bounds_metres": [
+    -650,
+    -120,
+    420,
+    820
+  ],
+  "route_nodes": [
+    63042392,
+    63033814,
+    63051166,
+    63029857,
+    63042392
+  ],
+  "route_roads": [
+    "Hopedale Street",
+    "Union Street",
+    "Dutcher Street",
+    "Adin Street"
+  ],
+  "town_hall_way": 213631977,
+  "pavement_width_metres": 7.2,
+  "sidewalk_width_metres": 1.7,
+  "elevation": "Provisional flat datum; no surveyed elevation imported",
+  "garage": "Fictional added property; not an actual parcel or residence",
+  "traffic_enabled": true,
+  "landmark_ways": [
+    213632098,
+    213632360
+  ],
+  "modeled_bridges": [
+    1268960544
+  ]
+}

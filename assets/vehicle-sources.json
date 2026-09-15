@@ -1,0 +1,26 @@
+{
+  "downloaded": "2026-09-15",
+  "creator": "Roblox",
+  "models": {
+    "Sport": {
+      "asset_id": 6433323089,
+      "raw_download_sha256": "7f0d870101bcfa10954ce79fdba5ef9021315a679331867e7c6117f6cf70ceb9",
+      "bundled_sha256": "175ba8aa4e08cf100eec26c31cd494fcf7a84a0160f537fd1acaf00422848cd7"
+    },
+    "Pickup": {
+      "asset_id": 6418225759,
+      "raw_download_sha256": "86a0278026c6301946b66fdd71f46f29f1805969e54c6ca21df1d21bfc23bf6f",
+      "bundled_sha256": "7e1d05b314296f96369f83da9b3b065c9860e7ff26d3c0dc6cb9fd6e7ff6d573"
+    },
+    "Electric": {
+      "asset_id": 6418239833,
+      "raw_download_sha256": "68760d0686f8add9a3c22392c86fe37223399eb137687cf77b09c5fefc9d3137",
+      "bundled_sha256": "a5acd91c92f8038f66504d987ebe527bcd5c6d3ea675e7b70da7a3d2e996d847"
+    },
+    "Police": {
+      "asset_id": 6418230807,
+      "raw_download_sha256": "006ea91bf89eb295960d51989112c096bbc140fcfed7b9a49df34cf06d836a67",
+      "bundled_sha256": "2b169742804547fbb9ed878f32286dc24b90c30529a52e694fbcf9a9422eded5"
+    }
+  }
+}

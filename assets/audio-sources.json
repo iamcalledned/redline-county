@@ -1,0 +1,287 @@
+{
+  "verified": "2026-09-15",
+  "source": "Roblox public Creator Store toolbox-service API",
+  "engine_source": {
+    "creator": "Roblox",
+    "model": 6433323089,
+    "ids": [
+      6417179625,
+      6417165160,
+      6417189222
+    ]
+  },
+  "effects": [
+    {
+      "asset": {
+        "audioDetails": {
+          "audioType": "SoundEffect",
+          "artist": "JuriaanT",
+          "title": "WaiI Police Siren",
+          "musicAlbum": "",
+          "tags": [
+            "Car_alarm",
+            "Emergency_vehicle",
+            "Police_car_(siren)",
+            "Ambulance_(siren)",
+            "Siren"
+          ]
+        },
+        "id": 4832498807,
+        "name": "WaiI Police Siren",
+        "typeId": 3,
+        "assetSubTypes": [],
+        "assetGenres": [
+          "All"
+        ],
+        "isEndorsed": false,
+        "description": "Quality looped police sirens. \n\nNormal:\n https://www.roblox.com/library/4832498807/Police-Siren https://www.roblox.com/library/4832422661/Yelp-Police-Siren https://www.roblox.com/library/4832478256/Priority-Police-Siren \n\nRumbler:\n https://www.roblox.com/library/4832422829/Rumbler-Yelp-Police-Siren https://www.roblox.com/library/4832478646/Rumbler-Priority-Police-Siren https://www.roblox.com/library/4832500208/Rumbler-Wail-Police-Siren \n\nHorn:\n https://www.roblox.com/library/4832500775/Rumbler-Horn-Police",
+        "duration": 5,
+        "hasScripts": false,
+        "createdUtc": "2020-03-29T11:28:30.643Z",
+        "updatedUtc": "2022-05-03T05:36:15.91Z",
+        "isAssetHashApproved": true,
+        "visibilityStatus": 0,
+        "socialLinks": [],
+        "previewAssets": {
+          "imagePreviewAssets": [],
+          "videoPreviewAssets": []
+        }
+      },
+      "creator": {
+        "id": 124640440,
+        "name": "JuriaanT",
+        "type": 1,
+        "isVerifiedCreator": true
+      },
+      "voting": {
+        "showVotes": true,
+        "upVotes": 0,
+        "downVotes": 0,
+        "canVote": false,
+        "hasVoted": false,
+        "voteCount": 0,
+        "upVotePercent": 100
+      },
+      "fiatProduct": {
+        "purchasePrice": {
+          "currencyCode": "USD",
+          "quantity": {
+            "significand": 0,
+            "exponent": 0
+          }
+        },
+        "published": true,
+        "purchasable": true,
+        "isFree": true
+      }
+    },
+    {
+      "asset": {
+        "audioDetails": {
+          "audioType": "SoundEffect",
+          "artist": "Pro Sound Effects",
+          "title": "Vehicle Skid In Fast Long Skid Stop Cu 1 (SFX)",
+          "musicAlbum": "",
+          "soundEffectCategory": "vehicles",
+          "soundEffectSubcategory": "tires",
+          "tags": [
+            "Car",
+            "Skidding",
+            "Tire_squeal",
+            "Car_passing_by",
+            "Race_car_auto_racing",
+            "Squeal",
+            "Whir",
+            "Sound_effect"
+          ]
+        },
+        "id": 9120397746,
+        "name": "Vehicle Skid In Fast Long Skid Stop Cu 1 (SFX)",
+        "typeId": 3,
+        "assetSubTypes": [],
+        "assetGenres": [
+          "All"
+        ],
+        "isEndorsed": false,
+        "description": "Vehicle Skid, In Fast, Long Skid Stop CU, Multiple Tire Squeal, Car Slide, Several Versions\n\nDuration: 3.7 seconds\nCategory: Vehicles - Tires\nAsset Type: Sound Effect\n\nCourtesy of Pro Sound Effects.",
+        "duration": 4,
+        "hasScripts": false,
+        "createdUtc": "2022-03-17T00:08:25.713Z",
+        "updatedUtc": "2024-11-05T00:37:11.82Z",
+        "isAssetHashApproved": true,
+        "visibilityStatus": 0,
+        "socialLinks": [],
+        "previewAssets": {
+          "imagePreviewAssets": [],
+          "videoPreviewAssets": []
+        }
+      },
+      "creator": {
+        "id": 7462895450,
+        "name": "ProSoundEffects",
+        "type": 1,
+        "isVerifiedCreator": true
+      },
+      "voting": {
+        "showVotes": true,
+        "upVotes": 0,
+        "downVotes": 0,
+        "canVote": false,
+        "hasVoted": false,
+        "voteCount": 0,
+        "upVotePercent": 0
+      },
+      "fiatProduct": {
+        "purchasePrice": {
+          "currencyCode": "USD",
+          "quantity": {
+            "significand": 0,
+            "exponent": 0
+          }
+        },
+        "published": true,
+        "purchasable": true,
+        "isFree": true
+      }
+    },
+    {
+      "asset": {
+        "audioDetails": {
+          "audioType": "SoundEffect",
+          "artist": "Pro Sound Effects",
+          "title": "Metal Crash 2 (SFX)",
+          "musicAlbum": "",
+          "soundEffectCategory": "crashes",
+          "soundEffectSubcategory": "metal",
+          "tags": [
+            "Explosion",
+            "Burst_pop",
+            "Glass",
+            "Chink_clink",
+            "Shatter",
+            "Bang",
+            "Smash_crash",
+            "Breaking",
+            "Sound_effect"
+          ]
+        },
+        "id": 9116546326,
+        "name": "Metal Crash 2 (SFX)",
+        "typeId": 3,
+        "assetSubTypes": [],
+        "assetGenres": [
+          "All"
+        ],
+        "isEndorsed": false,
+        "description": "Metal Crash, Huge Impact, Debris Scattering, Squeaking, Thunderous, Hollow Metallic Hit\n\nDuration: 4.2 seconds\nCategory: Crashes - Metal\nAsset Type: Sound Effect\n\nCourtesy of Pro Sound Effects.",
+        "duration": 4,
+        "hasScripts": false,
+        "createdUtc": "2022-03-16T14:27:12.21Z",
+        "updatedUtc": "2024-11-04T21:49:37.947Z",
+        "isAssetHashApproved": true,
+        "visibilityStatus": 0,
+        "socialLinks": [],
+        "previewAssets": {
+          "imagePreviewAssets": [],
+          "videoPreviewAssets": []
+        }
+      },
+      "creator": {
+        "id": 7462895450,
+        "name": "ProSoundEffects",
+        "type": 1,
+        "isVerifiedCreator": true
+      },
+      "voting": {
+        "showVotes": true,
+        "upVotes": 0,
+        "downVotes": 0,
+        "canVote": false,
+        "hasVoted": false,
+        "voteCount": 0,
+        "upVotePercent": 100
+      },
+      "fiatProduct": {
+        "purchasePrice": {
+          "currencyCode": "USD",
+          "quantity": {
+            "significand": 0,
+            "exponent": 0
+          }
+        },
+        "published": true,
+        "purchasable": true,
+        "isFree": true
+      }
+    },
+    {
+      "asset": {
+        "audioDetails": {
+          "audioType": "SoundEffect",
+          "artist": "Intended Chaos",
+          "title": "Radio Beep",
+          "musicAlbum": "",
+          "tags": [
+            "Telephone",
+            "Ringtone",
+            "Telephone_dialing_DTMF",
+            "Dial_tone",
+            "Beep_bleep",
+            "Silence",
+            "Sound_effect",
+            "Sidetone"
+          ]
+        },
+        "id": 6066104082,
+        "name": "Radio Beep",
+        "typeId": 3,
+        "assetSubTypes": [],
+        "assetGenres": [
+          "All"
+        ],
+        "isEndorsed": false,
+        "description": "Audio",
+        "duration": 0,
+        "hasScripts": false,
+        "createdUtc": "2020-12-10T01:34:59.903Z",
+        "updatedUtc": "2022-05-03T11:41:57.603Z",
+        "isAssetHashApproved": true,
+        "visibilityStatus": 0,
+        "socialLinks": [],
+        "previewAssets": {
+          "imagePreviewAssets": [],
+          "videoPreviewAssets": []
+        }
+      },
+      "creator": {
+        "id": 8047433,
+        "name": "Intended Chaos",
+        "type": 2,
+        "isVerifiedCreator": true,
+        "latestGroupUpdaterUserId": 1613142704,
+        "latestGroupUpdaterUserName": "IntentionalChaos"
+      },
+      "voting": {
+        "showVotes": true,
+        "upVotes": 0,
+        "downVotes": 0,
+        "canVote": false,
+        "hasVoted": false,
+        "voteCount": 0,
+        "upVotePercent": 0
+      },
+      "fiatProduct": {
+        "purchasePrice": {
+          "currencyCode": "USD",
+          "quantity": {
+            "significand": 0,
+            "exponent": 0
+          }
+        },
+        "published": true,
+        "purchasable": true,
+        "isFree": true
+      }
+    }
+  ]
+}

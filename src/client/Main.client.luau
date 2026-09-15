@@ -6,76 +6,26 @@ local ContextActionService = game:GetService("ContextActionService")
 local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Units = require(ReplicatedStorage.Shared.Units)
+local Metrics = require(ReplicatedStorage.Shared.DrivingMetrics)
+local CockpitFit = require(ReplicatedStorage.Shared.CockpitFit)
+local TownMap = require(ReplicatedStorage.Shared.TownMap)
+local metric = Metrics.new()
+local cockpit = false
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local driveInput = remotes:WaitForChild("DriveInput") :: RemoteEvent
 local request = remotes:WaitForChild("VehicleRequest") :: RemoteEvent
 local notice = remotes:WaitForChild("Notice") :: RemoteEvent
 
-local gui = Instance.new("ScreenGui")
-gui.Name, gui.ResetOnSpawn = "RedlineHUD", false
-gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
-gui.Parent = player:WaitForChild("PlayerGui")
-local panel = Instance.new("Frame")
-panel.Position, panel.Size = UDim2.fromOffset(12, 12), UDim2.new(1, -24, 0, 184)
-panel.BackgroundColor3, panel.BackgroundTransparency = Color3.fromRGB(18, 28, 42), 0.08
-panel.Parent = gui
-local corner = Instance.new("UICorner")
-corner.CornerRadius, corner.Parent = UDim.new(0, 12), panel
-
-local function label(text: string, y: number, height: number, size: number): TextLabel
-	local l = Instance.new("TextLabel")
-	l.Position, l.Size = UDim2.fromOffset(12, y), UDim2.new(1, -24, 0, height)
-	l.BackgroundTransparency = 1
-	l.Text, l.TextSize, l.TextWrapped = text, size, true
-	l.Font, l.TextColor3 = Enum.Font.GothamMedium, Color3.fromRGB(230, 241, 238)
-	l.TextXAlignment = Enum.TextXAlignment.Left
-	l.Parent = panel
-	return l
-end
-local title = label("REDLINE COUNTY  /  STARTING", 8, 24, 18)
-title.TextColor3 = Color3.fromRGB(255, 144, 127)
-local status = label("Loading your highway starting point…", 36, 32, 14)
-label("WASD / arrows: drive · Space/Shift: drift · T: turbo · F: exit · R: recover", 70, 28, 13)
-local buttons = Instance.new("Frame")
-buttons.Position, buttons.Size = UDim2.fromOffset(12, 108), UDim2.new(1, -24, 0, 64)
-buttons.BackgroundTransparency, buttons.Parent = 1, panel
-local grid = Instance.new("UIGridLayout")
-grid.CellSize, grid.CellPadding = UDim2.new(1 / 3, -4, 0.5, -3), UDim2.fromOffset(6, 0)
-grid.Parent = buttons
-for _, kind in { "Compact", "Coupe", "Interceptor", "Autobahn", "Turbo", "Recover" } do
-	local button = Instance.new("TextButton")
-	button.Text, button.TextSize = kind, 13
-	button.Font = Enum.Font.GothamBold
-	button.TextColor3, button.BackgroundColor3 = Color3.fromRGB(235, 246, 241), Color3.fromRGB(46, 85, 99)
-	button.Parent = buttons
-	button.Activated:Connect(function()
-		if kind == "Recover" then
-			request:FireServer("Reset")
-		elseif kind == "Autobahn" then
-			request:FireServer("Highway")
-		elseif kind == "Turbo" then
-			request:FireServer("Turbo")
-		else
-			request:FireServer("Spawn", kind)
-		end
-	end)
-end
-local speed = Instance.new("TextLabel")
-speed.AnchorPoint, speed.Position = Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -14)
-speed.Size = UDim2.fromOffset(270, 78)
-speed.BackgroundColor3, speed.BackgroundTransparency = Color3.fromRGB(18, 28, 42), 0.15
-speed.TextColor3, speed.TextSize, speed.Font = Color3.fromRGB(121, 239, 216), 16, Enum.Font.GothamBold
-speed.Text, speed.Parent = "GARAGE", gui
-
-notice.OnClientEvent:Connect(function(message: string)
-	status.Text = message
+local UI = require(script.Parent.Interface)
+local diagnosticLabel = UI.Diagnostic
+local speed = UI.Speed
+notice.OnClientEvent:Connect(function(message: string, destination: string?)
+	UI.notify(message)
+	if destination == "jobs" or destination == "workshop" then
+		UI.open(destination)
+	end
 end)
-local initial = player:GetAttribute("GarageMessage")
-if type(initial) == "string" then
-	status.Text = initial
-end
-
 local held: { [string]: boolean } = {}
 local active: BasePart? = nil
 local elapsed = 0
@@ -83,17 +33,18 @@ local cameraPosition: Vector3? = nil
 local previousBodyPosition: Vector3? = nil
 local previousType: Enum.CameraType? = nil
 local previousFov = 70
+local arrivalCharacter: Model? = nil
 local controls = {
 	{
 		name = "Forward",
 		title = "GAS",
-		keys = { Enum.KeyCode.W, Enum.KeyCode.Up },
+		keys = { Enum.KeyCode.W, Enum.KeyCode.Up, Enum.KeyCode.ButtonR2 },
 		position = UDim2.new(1, -90, 1, -195),
 	},
 	{
 		name = "Reverse",
 		title = "BRAKE",
-		keys = { Enum.KeyCode.S, Enum.KeyCode.Down },
+		keys = { Enum.KeyCode.S, Enum.KeyCode.Down, Enum.KeyCode.ButtonL2 },
 		position = UDim2.new(1, -90, 1, -115),
 	},
 	{
@@ -111,10 +62,15 @@ local controls = {
 	{
 		name = "Drift",
 		title = "DRIFT",
-		keys = { Enum.KeyCode.Space, Enum.KeyCode.LeftShift },
-		position = UDim2.new(1, -170, 1, -115),
+		keys = { Enum.KeyCode.Space, Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonX },
+		position = UDim2.new(0.5, -32, 1, -195),
 	},
-	{ name = "Exit", title = "EXIT", keys = { Enum.KeyCode.F }, position = UDim2.new(0, 22, 1, -195) },
+	{
+		name = "Exit",
+		title = "EXIT",
+		keys = { Enum.KeyCode.F, Enum.KeyCode.ButtonY },
+		position = UDim2.new(0, 22, 1, -195),
+	},
 }
 
 local function ownBody(): BasePart?
@@ -131,8 +87,48 @@ local function ownBody(): BasePart?
 	return model.PrimaryPart
 end
 
+local gamepadSteer = 0
+UserInputService.InputChanged:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.Thumbstick1 then
+		gamepadSteer = if math.abs(input.Position.X) > 0.12 then input.Position.X else 0
+	end
+end)
 local hiddenParts: { [BasePart]: number } = {}
+local windows: { [BasePart]: number } = {}
+local avatarConnection: RBXScriptConnection? = nil
+local windowConnection: RBXScriptConnection? = nil
+local function hideAvatar(part: Instance)
+	if part:IsA("BasePart") then
+		if hiddenParts[part] == nil then
+			hiddenParts[part] = part.LocalTransparencyModifier
+		end
+		part.LocalTransparencyModifier = 1
+	end
+end
+local function cacheWindow(part: Instance)
+	local name = part.Name:lower()
+	if
+		part:IsA("BasePart")
+		and (name == "glass" or name:find("door_glass", 1, true) or name:find("windshield", 1, true))
+	then
+		windows[part] = part.LocalTransparencyModifier
+	end
+end
 local function stopControls()
+	if avatarConnection then
+		avatarConnection:Disconnect()
+		avatarConnection = nil
+	end
+	if windowConnection then
+		windowConnection:Disconnect()
+		windowConnection = nil
+	end
+	for part, transparency in windows do
+		if part.Parent then
+			part.LocalTransparencyModifier = transparency
+		end
+	end
+	table.clear(windows)
 	for part, transparency in hiddenParts do
 		if part.Parent then
 			part.LocalTransparencyModifier = transparency
@@ -157,6 +153,20 @@ local function stopControls()
 end
 
 local function startControls()
+	local character = player.Character
+	if character then
+		for _, part in character:GetDescendants() do
+			hideAvatar(part)
+		end
+		avatarConnection = character.DescendantAdded:Connect(hideAvatar)
+	end
+	if active and active.Parent then
+		for _, part in active.Parent:GetDescendants() do
+			cacheWindow(part)
+		end
+		windowConnection = active.Parent.DescendantAdded:Connect(cacheWindow)
+	end
+	metric = Metrics.new()
 	local camera = workspace.CurrentCamera
 	if camera then
 		previousType, previousFov = camera.CameraType, camera.FieldOfView
@@ -165,6 +175,10 @@ local function startControls()
 		ContextActionService:BindActionAtPriority(
 			"Redline" .. control.name,
 			function(_: string, state: Enum.UserInputState)
+				if UI.Name ~= "" then
+					held[control.name] = false
+					return Enum.ContextActionResult.Pass
+				end
 				if state == Enum.UserInputState.Begin then
 					held[control.name] = true
 					if control.name == "Exit" then
@@ -189,7 +203,47 @@ local function startControls()
 	end
 end
 
+local function layoutControls()
+	local wide = player:GetAttribute("WideTouchControls") == true
+	for _, control in controls do
+		local button = ContextActionService:GetButton("Redline" .. control.name)
+		if button then
+			button.Visible = UI.Name == ""
+			button.Size = UDim2.fromOffset(if wide then 76 else 64, if wide then 76 else 64)
+			local pos = control.position
+			ContextActionService:SetPosition(
+				"Redline" .. control.name,
+				UDim2.new(
+					pos.X.Scale,
+					pos.X.Offset + (if wide and pos.X.Scale == 0 then 16 else 0),
+					pos.Y.Scale,
+					pos.Y.Offset
+				)
+			)
+		end
+	end
+end
+UI.Changed.Event:Connect(function()
+	table.clear(held)
+	gamepadSteer = 0
+	layoutControls()
+end)
+player:GetAttributeChangedSignal("WideTouchControls"):Connect(layoutControls)
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then
+		return
+	end
+	if input.KeyCode == Enum.KeyCode.V then
+		player:SetAttribute("CockpitView", not player:GetAttribute("CockpitView"))
+	elseif input.KeyCode == Enum.KeyCode.G then
+		player:SetAttribute("Diagnostics", not player:GetAttribute("Diagnostics"))
+		metric = Metrics.new()
+	end
+end)
 ContextActionService:BindAction("RedlineTurbo", function(_: string, state: Enum.UserInputState)
+	if UI.Name ~= "" then
+		return Enum.ContextActionResult.Pass
+	end
 	if state == Enum.UserInputState.Begin and ownBody() then
 		request:FireServer("Turbo")
 	end
@@ -197,8 +251,11 @@ ContextActionService:BindAction("RedlineTurbo", function(_: string, state: Enum.
 end, false, Enum.KeyCode.T)
 
 ContextActionService:BindAction("RedlineRecover", function(_: string, state: Enum.UserInputState)
+	if UI.Name ~= "" and UI.Name ~= "results" then
+		return Enum.ContextActionResult.Pass
+	end
 	if state == Enum.UserInputState.Begin then
-		request:FireServer("Reset")
+		request:FireServer(if UI.Name == "results" then "ReturnHome" else "Reset")
 	end
 	return Enum.ContextActionResult.Pass
 end, false, Enum.KeyCode.R)
@@ -215,9 +272,8 @@ RunService:BindToRenderStep("RedlineCamera", Enum.RenderPriority.Camera.Value + 
 	local body = ownBody()
 	local character = player.Character
 	local root = if character then character:FindFirstChild("HumanoidRootPart") :: BasePart? else nil
-	title.Text = if root and math.abs(root.Position.X - Config.Highway.X) < 300
-		then "REDLINE COUNTY / AUTOBAHN · TRAFFIC"
-		else "REDLINE COUNTY / GARAGE · CLICK AUTOBAHN TO ENTER"
+	cockpit = player:GetAttribute("CockpitView") == true
+	diagnosticLabel.Visible = player:GetAttribute("Diagnostics") == true and body ~= nil and UI.Name == ""
 	if body ~= active then
 		if active then
 			stopControls()
@@ -225,15 +281,45 @@ RunService:BindToRenderStep("RedlineCamera", Enum.RenderPriority.Camera.Value + 
 		active = body
 		if active then
 			startControls()
+			layoutControls()
 		end
 	end
 	if not body then
 		speed.Text = "GARAGE"
+		local camera = workspace.CurrentCamera
+		local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+		if camera and character and humanoid and root then
+			camera.CameraType = Enum.CameraType.Custom
+			camera.CameraSubject = humanoid
+			player.CameraMinZoomDistance = 0.5
+			local homeCenter = TownMap.Garage + Vector3.new(0, 0, 8 / 0.28)
+			player.CameraMaxZoomDistance = if (root.Position - homeCenter).Magnitude < 85 then 8 else 24
+			local arrival = character:GetAttribute("GarageArrival")
+			-- Wait for the server's relocation to reach this client before setting the
+			-- initial view. Do this once per character, leaving mouse orbit/zoom free.
+			if
+				arrivalCharacter ~= character
+				and typeof(arrival) == "CFrame"
+				and (root.Position - arrival.Position).Magnitude < 5
+			then
+				local focus = root.Position + Vector3.new(0, 1.5, 0)
+				camera.CFrame = CFrame.lookAt(root.Position + Vector3.new(0, 3, 6), focus)
+				camera.Focus = CFrame.new(focus)
+				camera.FieldOfView = 70
+				arrivalCharacter = character
+			end
+		end
 		return
 	end
-	local typing = UserInputService:GetFocusedTextBox() ~= nil
+	local typing = UserInputService:GetFocusedTextBox() ~= nil or UI.Name ~= ""
 	local throttle = if typing then 0 else (if held.Forward then 1 else 0) - (if held.Reverse then 1 else 0)
-	local steer = if typing then 0 else (if held.Right then 1 else 0) - (if held.Left then 1 else 0)
+	local steer = if typing
+		then 0
+		else math.clamp(
+			(if held.Right then 1 else 0) - (if held.Left then 1 else 0) + gamepadSteer,
+			-1,
+			1
+		)
 	elapsed += dt
 	if elapsed >= 1 / Config.InputHz then
 		elapsed = 0
@@ -241,27 +327,34 @@ RunService:BindToRenderStep("RedlineCamera", Enum.RenderPriority.Camera.Value + 
 	end
 	local velocity = body.AssemblyLinearVelocity
 	local model = body.Parent :: Model
+	local horizontalKmh = Units.kmh((velocity * Vector3.new(1, 0, 1)).Magnitude)
+	Metrics.step(metric, horizontalKmh, throttle, dt)
+	diagnosticLabel.Text = string.format(
+		"Steer %.1f° · ground %d/4 · damage %d%%\n0–50: %s s · last stop: %s m from %s km/h",
+		(model:GetAttribute("SteeringAngle") :: number?) or 0,
+		(model:GetAttribute("GroundedWheels") :: number?) or 0,
+		(model:GetAttribute("Damage") :: number?) or 0,
+		if metric.zeroTo50 then string.format("%.1f", metric.zeroTo50) else "—",
+		if metric.lastStop then string.format("%.1f", metric.lastStop) else "—",
+		if metric.lastFrom then string.format("%.0f", metric.lastFrom) else "—"
+	)
 	local boost = (model:GetAttribute("Boost") :: number?) or 0
 	local heat = (model:GetAttribute("TurboHeat") :: number?) or 0
 	local turboState = if model:GetAttribute("TurboOverheated")
 		then "COOLING"
 		elseif model:GetAttribute("TurboEnabled") then "TURBO"
 		else "TURBO OFF"
-	local trip = if model:GetAttribute("Highway")
-		then string.format(
-			"AUTOBAHN · %.2f km",
-			Units.kilometres((model:GetAttribute("TripStuds") :: number?) or 0)
-		)
-		else "HANDLING LAB"
 	speed.Text = string.format(
-		"%03d km/h · %03d mph %s\n%s %02d%% · HEAT %02d%%\n%s",
-		math.floor(Units.kmh((velocity * Vector3.new(1, 0, 1)).Magnitude)),
+		"%03d km/h · %03d mph\n%s %02d%% · TEMP %02d%%\nDAMAGE %02d%% · %s",
+		math.floor(horizontalKmh),
 		math.floor(Units.mph((velocity * Vector3.new(1, 0, 1)).Magnitude)),
-		if held.Drift then "SLIDE" else "",
 		turboState,
 		boost * 100,
 		heat * 100,
-		trip
+		(model:GetAttribute("Damage") :: number?) or 0,
+		if model:GetAttribute("Drifting")
+			then "DRIFT " .. tostring(model:GetAttribute("DriftPoints") or 0)
+			else "GRIP"
 	)
 	-- Translate the chase camera with recycled highway space to preserve the view.
 	if previousBodyPosition and cameraPosition then
@@ -276,21 +369,32 @@ RunService:BindToRenderStep("RedlineCamera", Enum.RenderPriority.Camera.Value + 
 		return
 	end
 	camera.CameraType = Enum.CameraType.Scriptable
-	local eye = body:FindFirstChild("CockpitEye")
-	if eye and eye:IsA("Attachment") and not model:GetAttribute("Crashed") then
-		if character then
-			for _, part in character:GetDescendants() do
-				if part:IsA("BasePart") then
-					if hiddenParts[part] == nil then
-						hiddenParts[part] = part.LocalTransparencyModifier
-					end
-					part.LocalTransparencyModifier = 1
-				end
-			end
+	for part in hiddenParts do
+		if part.Parent then
+			part.LocalTransparencyModifier = 1
 		end
-		camera.CFrame = eye.WorldCFrame
+	end
+	for part, transparency in windows do
+		if part.Parent then
+			part.LocalTransparencyModifier = if cockpit then 0.9 else transparency
+		end
+	end
+	local eye = body:FindFirstChild("CockpitEye")
+	if cockpit and eye and eye:IsA("Attachment") and not model:GetAttribute("Crashed") then
+		local height = CockpitFit.adjust(
+			eye.Position.Y,
+			(player:GetAttribute("CockpitHeight") :: number?) or 0,
+			(eye:GetAttribute("MinHeight") :: number?) or eye.Position.Y,
+			(eye:GetAttribute("MaxHeight") :: number?) or eye.Position.Y
+		)
+		local position = body.CFrame:PointToWorldSpace(Vector3.new(eye.Position.X, height, eye.Position.Z))
+		local forward = body.CFrame.LookVector
+		-- No delayed position following, and no chassis roll on the horizon.
+		local up = if math.abs(forward.Y) < 0.98 then Vector3.yAxis else body.CFrame.UpVector
+		camera.CFrame = CFrame.lookAt(position, position + forward * 40, up)
 		camera.Focus = camera.CFrame * CFrame.new(0, 0, -40)
-		camera.FieldOfView = 80
+		camera.FieldOfView = 72
+		cameraPosition = nil
 		return
 	end
 	local facing = body.CFrame.LookVector * Vector3.new(1, 0, 1)
@@ -322,6 +426,8 @@ RunService:BindToRenderStep("RedlineCamera", Enum.RenderPriority.Camera.Value + 
 	end
 	camera.CFrame = CFrame.lookAt(cameraPosition :: Vector3, focus)
 	camera.Focus = CFrame.new(focus)
-	camera.FieldOfView += (70 + math.min(velocity.Magnitude / 10, 10) - camera.FieldOfView) * alpha
+	camera.FieldOfView += ((if player:GetAttribute("ReducedMotion")
+		then 70
+		else 70 + math.min(velocity.Magnitude / 10, 10)) - camera.FieldOfView) * alpha
 end)
 print("[REDLINE COUNTY] Driving HUD, keyboard/touch controls and chase camera ready.")

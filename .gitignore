@@ -36,3 +36,8 @@ Desktop.ini
 
 # Keep shared .vscode configuration, Roblox source assets, roblox.yml,
 # toolchain pins, project manifests and future dependency lockfiles tracked.
+
+# Python GIS caches and interrupted geographic downloads.
+__pycache__/
+*.pyc
+*.download
