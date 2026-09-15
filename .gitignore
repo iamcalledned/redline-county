@@ -1,0 +1,34 @@
+# Generated Rojo builds and sourcemaps (source models outside build stay tracked).
+/build/
+/sourcemap.json
+*.rbxl.lock
+*.rbxlx.lock
+
+# Downloaded development tools and dependency installations.
+/.tools/
+node_modules/
+/Packages/
+/ServerPackages/
+
+# Local credentials and environment overrides.
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+
+# Local agent state, logs, editor recovery files and OS metadata.
+/.agents/
+/.codex/
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Keep shared .vscode configuration, Roblox source assets, roblox.yml,
+# toolchain pins, project manifests and future dependency lockfiles tracked.

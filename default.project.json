@@ -1,0 +1,85 @@
+{
+  "name": "RedlineCounty",
+  "servePort": 34872,
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Shared": {
+        "$path": "src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    },
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": {
+        "FilteringEnabled": true,
+        "Gravity": 196.2,
+        "StreamingEnabled": false
+      }
+    },
+    "Lighting": {
+      "$className": "Lighting",
+      "$properties": {
+        "ClockTime": 0.5,
+        "Brightness": 1.5,
+        "Ambient": [
+          0.055,
+          0.065,
+          0.1
+        ],
+        "OutdoorAmbient": [
+          0.12,
+          0.14,
+          0.19
+        ],
+        "GlobalShadows": true,
+        "ExposureCompensation": 0.1,
+        "FogColor": [
+          0.05,
+          0.06,
+          0.09
+        ],
+        "FogStart": 650,
+        "FogEnd": 1800,
+        "ExtendLightRangeTo120": "Enabled",
+        "LightingStyle": "Realistic",
+        "PrioritizeLightingQuality": true
+      },
+      "NightBloom": {
+        "$className": "BloomEffect",
+        "$properties": {
+          "Intensity": 0.12,
+          "Size": 20,
+          "Threshold": 1.5
+        }
+      }
+    },
+    "SoundService": {
+      "$className": "SoundService",
+      "$properties": {
+        "RespectFilteringEnabled": true
+      }
+    },
+    "AssetService": {
+      "$className": "AssetService",
+      "$properties": {
+        "AllowInsertFreeAssets": true
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "files.associations": {"*.lua": "luau", "*.luau": "luau"},
+  "[luau]": {"editor.defaultFormatter": "JohnnyMorganz.stylua", "editor.formatOnSave": true},
+  "luau-lsp.platform.type": "roblox",
+  "luau-lsp.sourcemap.enabled": true,
+  "luau-lsp.sourcemap.autogenerate": true,
+  "luau-lsp.sourcemap.rojoProjectFile": "default.project.json",
+  "luau-lsp.sourcemap.rojoPath": "/home/ned/.rokit/bin/rojo",
+  "stylua.styluaPath": "/home/ned/.rokit/bin/stylua",
+  "selene.selenePath": "/home/ned/.rokit/bin/selene"
+}

@@ -1,0 +1,99 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Redline: Serve prototype (localhost)",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/project.sh",
+        "serve"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Redline: Serve smoke test (localhost)",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/project.sh",
+        "smoke-serve"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Redline: Build places",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/project.sh",
+        "build"
+      ],
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Redline: Format Luau",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/project.sh",
+        "format"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Redline: Lint Luau",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/project.sh",
+        "lint"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Redline: Generate sourcemap",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/project.sh",
+        "sourcemap"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Redline: Check all",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/project.sh",
+        "check"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Redline: Run logic tests",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/project.sh",
+        "test"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Redline: Type-check Luau",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/project.sh",
+        "typecheck"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}
